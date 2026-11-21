@@ -8,12 +8,13 @@ type Props = {
   selectedId: string | null;
   onData: (fc: FeatureCollection<GPolygon> | null) => void;
   onStatus: (s: { loading: boolean; error: string | null }) => void;
+  retryKey: number;
   onSelect: (f: Feature<GPolygon>) => void;
 };
 
 const toLatLngs = (f: Feature<GPolygon>) => f.geometry.coordinates[0]!.map(([lon, lat]) => [lat!, lon!] as [number, number]);
 
-export function BuildingsLayer({ data, selectedId, onData, onStatus, onSelect }: Props) {
+export function BuildingsLayer({ data, selectedId, onData, onStatus, onSelect, retryKey }: Props) {
   const map = useMap();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ctrl = useRef<AbortController | null>(null);
@@ -32,15 +33,13 @@ export function BuildingsLayer({ data, selectedId, onData, onStatus, onSelect }:
         onStatus({ loading: false, error: null });
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
-        onStatus({ loading: false, error: (e as Error).message === "busy"
-          ? "Building data is busy right now. Try again in a moment, or draw your roof."
-          : "Couldn't load buildings. You can still draw your roof." });
+        onStatus({ loading: false, error: "Couldn't load buildings" });
       }
     }, 800);
   };
 
   useMapEvents({ moveend: load });
-  useEffect(() => { load(); return () => clearTimeout(timer.current); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); return () => clearTimeout(timer.current); }, [retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>

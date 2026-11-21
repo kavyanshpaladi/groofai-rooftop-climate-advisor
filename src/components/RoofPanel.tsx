@@ -57,6 +57,7 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
         className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50">
         See results
       </button>
+      {!ready && <p className="mt-2 text-center text-xs text-muted-foreground">Answer all questions to continue</p>}
     </aside>
   );
 }

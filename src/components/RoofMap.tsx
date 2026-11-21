@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import L from "leaflet";
-import { MapContainer, Polygon, TileLayer } from "react-leaflet";
+import { MapContainer, Polygon, TileLayer, ZoomControl } from "react-leaflet";
 import type { Feature, FeatureCollection, Polygon as GPolygon } from "geojson";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
@@ -14,6 +14,7 @@ export default function RoofMap() {
   const [data, setData] = useState<FeatureCollection<GPolygon> | null>(null);
   const [status, setStatus] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
   const [selected, setSelected] = useState<Feature<GPolygon> | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [drawReady, setDrawReady] = useState(false);
 
   useEffect(() => {
@@ -47,13 +48,15 @@ export default function RoofMap() {
 
   return (
     <div className="relative h-dvh w-full">
-      <MapContainer center={START} zoom={17} maxZoom={19} ref={setMap} className="h-full w-full" zoomControl={false}>
+      <MapContainer center={START} zoom={17} maxZoom={21} scrollWheelZoom ref={setMap} className="h-full w-full" zoomControl={false}>
+        <ZoomControl position="bottomleft" />
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community | Buildings &copy; OpenStreetMap contributors"
-          maxZoom={19}
+          maxNativeZoom={19}
+          maxZoom={21}
         />
-        <BuildingsLayer data={data} selectedId={selectedId} onData={setData} onStatus={setStatus} onSelect={setSelected} />
+        <BuildingsLayer data={data} selectedId={selectedId} onData={setData} onStatus={setStatus} onSelect={setSelected} retryKey={retryKey} />
         {selected && (
           <Polygon positions={toLatLngs(selected)} pathOptions={{ color: "#f97316", weight: 3, fillColor: "#fb923c", fillOpacity: 0.45 }} />
         )}
@@ -66,7 +69,12 @@ export default function RoofMap() {
           <button onClick={sample} className="rounded-lg bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm">Try a sample roof</button>
         </div>
         {status.loading && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Loading buildings…</p>}
-        {status.error && <p className="rounded-md bg-card px-2 py-1 text-xs text-destructive shadow-sm">{status.error}</p>}
+        {status.error && (
+          <div className="flex w-fit items-center gap-2 rounded-md bg-card px-2 py-1 text-xs shadow-sm">
+            <span className="text-destructive">{status.error}</span>
+            <button onClick={() => setRetryKey((k) => k + 1)} className="rounded bg-primary px-2 py-0.5 font-medium text-primary-foreground">Retry</button>
+          </div>
+        )}
         {map && !status.loading && !status.error && !data && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Zoom in to see buildings</p>}
       </div>
 

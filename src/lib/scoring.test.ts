@@ -6,6 +6,11 @@ const base: Answers = { roofType: "flat", shade: "none", access: "easy", priorit
 const get = (r: ReturnType<typeof scoreOptions>, id: string) => r.find((o) => o.id === id)!.score;
 
 describe("scoring", () => {
+  it("reflective hot-summer boost starts at 37 °C", () => {
+    const i = { usable: 50, irradiance: 5.5, rainfall: 800 };
+    expect(get(scoreOptions(base, { ...i, maxTemp: 36.9 }), "reflective")).toBe(50);
+    expect(get(scoreOptions(base, { ...i, maxTemp: 37 }), "reflective")).toBe(75);
+  });
   it("solar: 50 +20 +10 +10 = 90", () => {
     expect(get(scoreOptions(base, { usable: 50, irradiance: 5.5, maxTemp: 30, rainfall: 800 }), "solar")).toBe(90);
   });
@@ -14,11 +19,11 @@ describe("scoring", () => {
   });
   it("hybrid = average of top two + 5", () => {
     const r = scoreOptions(base, { usable: 50, irradiance: 5.5, maxTemp: 33, rainfall: 800 });
-    // solar 90, rainwater 80, reflective 75
+    // solar 90, rainwater 80, reflective 50
     expect(get(r, "hybrid")).toBe(90);
   });
   it("reflective: hot + cooler + low budget = 100", () => {
-    const r = scoreOptions({ ...base, priority: "cooler", budget: "low" }, { usable: 50, irradiance: 5.5, maxTemp: 33, rainfall: 800 });
+    const r = scoreOptions({ ...base, priority: "cooler", budget: "low" }, { usable: 50, irradiance: 5.5, maxTemp: 38, rainfall: 800 });
     expect(get(r, "reflective")).toBe(100);
   });
 });

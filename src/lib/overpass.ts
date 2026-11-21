@@ -2,6 +2,12 @@ import type { Feature, FeatureCollection, Polygon } from "geojson";
 
 export type BBox = { south: number; west: number; north: number; east: number };
 
+export const MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+
 const cache = new Map<string, FeatureCollection<Polygon>>();
 
 export function bboxKey(b: BBox) {
@@ -33,16 +39,30 @@ export async function fetchBuildings(b: BBox, signal?: AbortSignal) {
   const key = bboxKey(b);
   const hit = cache.get(key);
   if (hit) return hit;
-  const query = `[out:json][timeout:25];way["building"](${b.south},${b.west},${b.north},${b.east});out geom;`;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    body: "data=" + encodeURIComponent(query),
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    signal: signal ?? null,
-  });
-  if (res.status === 429 || res.status === 504) throw new Error("busy");
-  if (!res.ok) throw new Error("failed");
-  const json = (await res.json()) as { elements: OverpassWay[] };
+  const query = `[out:json][timeout:15];way["building"](${b.south},${b.west},${b.north},${b.east});out geom;`;
+  let json: { elements: OverpassWay[] } | null = null;
+  let busy = false;
+  for (let attempt = 0; attempt < 2 && !json; attempt++) {
+    for (const url of MIRRORS) {
+      try {
+        const t = AbortSignal.timeout(15000);
+        const res = await fetch(url, {
+          method: "POST",
+          body: "data=" + encodeURIComponent(query),
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          signal: signal ? AbortSignal.any([signal, t]) : t,
+        });
+        if (res.status === 429 || res.status === 504) { busy = true; continue; }
+        if (!res.ok) continue;
+        json = (await res.json()) as { elements: OverpassWay[] };
+        break;
+      } catch (e) {
+        if (signal?.aborted) throw e;
+      }
+    }
+    if (!json && attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+  }
+  if (!json) throw new Error(busy ? "busy" : "failed");
   const fc = toGeoJSON(json.elements ?? []);
   cache.set(key, fc);
   return fc;

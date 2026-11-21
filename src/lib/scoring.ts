@@ -49,7 +49,7 @@ export function scoreOptions(a: Answers, i: ScoreInputs): OptionScore[] {
   const green = g.done();
 
   const r = scorer();
-  r.add(i.maxTemp >= 32, 25, "Your summers are hot, so a reflective roof helps most.");
+  r.add(i.maxTemp >= 37, 25, "Your summers are hot, so a reflective roof helps most.");
   r.add(a.priority === "cooler", 15, "It is the quickest way to cooler rooms.");
   r.add(a.budget === "low", 10, "It is the cheapest upgrade.");
   r.add(a.shade === "heavy", -10, "Heavy shade already keeps the roof cool.");
