@@ -1,3 +1,5 @@
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Feature, Polygon } from "geojson";
@@ -28,10 +30,10 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
   };
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-[1000] max-h-[70dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-5 shadow-lg md:inset-x-auto md:bottom-4 md:right-4 md:top-20 md:max-h-none md:w-80 md:rounded-2xl">
+    <aside className="roof-panel fixed inset-x-0 bottom-0 z-[1000] max-h-[70dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-5 shadow-lg md:inset-x-auto md:bottom-4 md:right-4 md:top-20 md:max-h-none md:w-80 md:rounded-2xl">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">Selected roof</h2>
-        <button onClick={onClose} aria-label="Close" className="rounded-md px-2 text-xl text-muted-foreground hover:bg-muted">×</button>
+        <Button onClick={onClose} aria-label="Close" title="Close" variant="ghost" size="icon" className="text-muted-foreground"><X /></Button>
       </div>
       <dl className="space-y-2 text-sm">
         <Row label="Roof area" value={`${fmt(s.area)} m²`} />
@@ -53,10 +55,9 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
 
       <h3 className="mb-2 mt-5 text-sm font-semibold text-foreground">About your roof</h3>
       <Questionnaire value={draft} onChange={setDraft} />
-      <button onClick={go} disabled={!ready}
-        className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50">
+      <Button onClick={go} disabled={!ready} className="mt-5 h-10 w-full">
         See results
-      </button>
+      </Button>
       {!ready && <p className="mt-2 text-center text-xs text-muted-foreground">Answer all questions to continue</p>}
     </aside>
   );

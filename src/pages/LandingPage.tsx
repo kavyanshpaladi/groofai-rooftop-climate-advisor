@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 
 const cards = [
@@ -19,7 +20,7 @@ export function LandingPage() {
           </div>
         ))}
       </div>
-      <Link to="/map" className="mt-10 w-fit rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90">Find my roof</Link>
+      <Button asChild className="mt-10 h-12 w-fit px-6"><Link to="/map">Find my roof</Link></Button>
     </main>
   );
 }

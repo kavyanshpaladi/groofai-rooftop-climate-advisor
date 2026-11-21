@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { loadReport, type Report } from "@/lib/report";
@@ -21,13 +22,14 @@ export function ResultsPage() {
     return (
       <main className="mx-auto max-w-xl px-5 py-16 text-center">
         <p className="text-muted-foreground">No roof selected yet.</p>
-        <Link to="/map" className="mt-4 inline-block rounded-lg bg-primary px-5 py-2.5 text-primary-foreground">Find my roof</Link>
+        <Button asChild className="mt-4"><Link to="/map">Find my roof</Link></Button>
       </main>
     );
   }
 
   const { usable, climate } = report;
-  const best = scores[0]!;
+  const best = scores[0];
+  if (!best) return null;
   const rest = scores.slice(1);
   const solar = solarImpact(usable, climate.irradiance, a);
   const refl = reflectiveImpact(usable, a);
@@ -50,17 +52,17 @@ export function ResultsPage() {
   const positives = best.reasons.slice(0, 3);
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-8 print:py-0">
+    <main className="roof-results mx-auto max-w-3xl px-5 py-8 print:py-0">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-primary">RoofWise</p>
           <h1 className="text-2xl font-bold text-foreground">Your rooftop report</h1>
           <p className="text-sm text-muted-foreground">Usable area {num(usable)} m² (estimated) · {report.lat.toFixed(4)}, {report.lon.toFixed(4)}</p>
         </div>
-        <button onClick={() => window.print()} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium print:hidden">Print report</button>
+        <Button onClick={() => window.print()} variant="outline" className="print:hidden">Print report</Button>
       </div>
 
-      <section className="rounded-2xl border-2 border-primary bg-card p-6">
+      <section className="result-card rounded-2xl border-2 border-primary bg-card p-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Best fit</p>
         <div className="mt-1 flex items-baseline justify-between">
           <h2 className="text-3xl font-bold text-foreground">{best.name}</h2>
@@ -73,12 +75,12 @@ export function ResultsPage() {
 
       <section className="mt-6 space-y-3">
         {rest.map((o, i) => (
-          <div key={o.id} className="rounded-xl border border-border bg-card p-4">
+          <div key={o.id} className="result-card rounded-xl border border-border bg-card p-4">
             <div className="flex items-baseline justify-between">
               <h3 className="font-semibold text-foreground">{i + 2}. {o.name}</h3>
               <span className="font-semibold text-primary">{o.score}/100</span>
             </div>
-            <div className="mt-2 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${o.score}%` }} /></div>
+            <div className="mt-2 h-1.5 rounded-full bg-muted"><div className="score-bar h-full rounded-full bg-primary" style={{ width: `${o.score}%` }} /></div>
             <p className="mt-2 text-xs text-muted-foreground">{o.reasons.join(" ")}</p>
             <ImpactList items={impact[o.id]} />
           </div>
@@ -109,7 +111,7 @@ export function ResultsPage() {
       </section>
 
       <p className="mt-6 rounded-lg bg-muted p-3 text-sm text-foreground">Planning estimate, not an engineering approval. Have a qualified professional inspect your roof.</p>
-      <Link to="/map" className="mt-6 inline-block text-sm text-primary print:hidden">← Back to map</Link>
+      <Button asChild variant="link" className="mt-6 px-0 print:hidden"><Link to="/map">← Back to map</Link></Button>
     </main>
   );
 }

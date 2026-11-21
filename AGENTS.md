@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Use the shared Button variants for app actions and questionnaire choices, and global CSS for map interaction and entrance motion; this keeps states consistent without adding animation libraries.
+- Disable entrance and score animations for reduced-motion preferences and printing so reports remain readable.

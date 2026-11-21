@@ -12,7 +12,7 @@ type Props = {
   onSelect: (f: Feature<GPolygon>) => void;
 };
 
-const toLatLngs = (f: Feature<GPolygon>) => f.geometry.coordinates[0]!.map(([lon, lat]) => [lat!, lon!] as [number, number]);
+const toLatLngs = (f: Feature<GPolygon>): [number, number][] => (f.geometry.coordinates[0] ?? []).flatMap(([lon, lat]) => typeof lon === "number" && typeof lat === "number" ? [[lat, lon] as [number, number]] : []);
 
 export function BuildingsLayer({ data, selectedId, onData, onStatus, onSelect, retryKey }: Props) {
   const map = useMap();
@@ -48,7 +48,7 @@ export function BuildingsLayer({ data, selectedId, onData, onStatus, onSelect, r
         if (id === selectedId) return null;
         return (
           <Polygon key={id} positions={toLatLngs(f)}
-            pathOptions={{ color: "#16a34a", weight: 1, fillColor: "#22c55e", fillOpacity: 0.3 }}
+            pathOptions={{ className: "roof-building", weight: 1, fillOpacity: 0.3 }}
             eventHandlers={{ click: () => onSelect(f) }} />
         );
       })}

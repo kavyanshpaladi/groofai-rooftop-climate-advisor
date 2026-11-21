@@ -37,6 +37,7 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --color-roof-selection: var(--roof-selection);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -73,6 +74,7 @@
 }
 
 :root {
+  --roof-selection: oklch(0.7 0.18 50);
   --solar: oklch(0.35 0.08 255);
   --water: oklch(0.7 0.1 230);
   --radius: 0.625rem;
@@ -111,6 +113,7 @@
 }
 
 .dark {
+  --roof-selection: oklch(0.78 0.16 50);
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -160,3 +163,50 @@
   body { background: white; }
   section { break-inside: avoid; }
 }
+
+/* Lightweight interaction and entrance motion; no animation dependency. */
+.roof-building {
+  stroke: var(--primary);
+  fill: var(--primary);
+  cursor: pointer;
+  transition: fill-opacity 180ms ease, stroke-width 180ms ease, stroke 180ms ease;
+}
+.roof-building:hover {
+  fill-opacity: 0.6;
+  stroke-width: 3;
+  stroke: var(--primary-foreground);
+}
+.roof-selected { stroke: var(--roof-selection); fill: var(--roof-selection); }
+.roof-panel { animation: sheet-enter 280ms ease-out both; }
+.result-card { animation: result-enter 420ms ease-out both; }
+.roof-results > section:nth-of-type(2) .result-card:nth-child(1) { animation-delay: 90ms; }
+.roof-results > section:nth-of-type(2) .result-card:nth-child(2) { animation-delay: 180ms; }
+.roof-results > section:nth-of-type(2) .result-card:nth-child(3) { animation-delay: 270ms; }
+.roof-results > section:nth-of-type(2) .result-card:nth-child(4) { animation-delay: 360ms; }
+.score-bar { transform-origin: left; animation: score-grow 700ms ease-out both; }
+.result-card:nth-child(1) .score-bar { animation-delay: 150ms; }
+.result-card:nth-child(2) .score-bar { animation-delay: 240ms; }
+.result-card:nth-child(3) .score-bar { animation-delay: 330ms; }
+.result-card:nth-child(4) .score-bar { animation-delay: 420ms; }
+.roof-results li.bg-secondary { transition: background-color 180ms ease; }
+.roof-results li.bg-secondary:hover { background-color: var(--accent); }
+.leaflet-control-zoom a {
+  background-color: var(--card);
+  color: var(--foreground);
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.leaflet-control-zoom a:hover { background-color: var(--accent); }
+.leaflet-control-zoom a:active { background-color: var(--primary); color: var(--primary-foreground); }
+.leaflet-control-zoom a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.leaflet-control-zoom a.leaflet-disabled { color: var(--muted-foreground); background-color: var(--muted); cursor: not-allowed; }
+@keyframes sheet-enter { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes panel-enter { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes result-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes score-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (min-width: 768px) { .roof-panel { animation-name: panel-enter; } }
+@media (max-width: 767px) { .roof-map-selected .leaflet-bottom.leaflet-left { bottom: 70dvh; } }
+@media (prefers-reduced-motion: reduce) {
+  .roof-panel, .result-card, .score-bar { animation: none; }
+  .roof-building, .leaflet-control-zoom a, .roof-results li.bg-secondary { transition: none; }
+}
+@media print { .result-card, .score-bar { animation: none; opacity: 1; transform: none; } }

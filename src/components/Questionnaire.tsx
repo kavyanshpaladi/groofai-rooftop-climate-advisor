@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Answers } from "@/lib/scoring";
 
 type Q<K extends keyof Answers> = { key: K; label: string; options: { value: Answers[K]; label: string }[] };
@@ -15,6 +17,7 @@ export type Draft = Partial<Answers> & { bill: number };
 export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v: Draft) => void }) {
   return (
     <div className="space-y-3">
+      <p aria-live="polite" className="text-xs font-medium text-muted-foreground">{QUESTIONS.filter((q) => value[q.key]).length} of 5 answered</p>
       {QUESTIONS.map((q) => (
         <div key={q.key}>
           <p className="mb-1 text-xs font-medium text-muted-foreground">{q.label}</p>
@@ -22,10 +25,11 @@ export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v:
             {q.options.map((o) => {
               const active = value[q.key] === o.value;
               return (
-                <button key={String(o.value)} type="button" onClick={() => onChange({ ...value, [q.key]: o.value })}
-                  className={`rounded-md border px-2.5 py-1 text-xs ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:bg-muted"}`}>
+                <Button key={String(o.value)} type="button" variant="chip" size="sm" aria-pressed={active} onClick={() => onChange({ ...value, [q.key]: o.value })}
+                  className="gap-1.5 px-2.5">
+                  <Check aria-hidden="true" className={active ? "opacity-100" : "opacity-0"} />
                   {o.label}
-                </button>
+                </Button>
               );
             })}
           </div>
