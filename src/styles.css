@@ -73,6 +73,8 @@
 }
 
 :root {
+  --solar: oklch(0.35 0.08 255);
+  --water: oklch(0.7 0.1 230);
   --radius: 0.625rem;
   --background: oklch(0.99 0.005 150);
   --foreground: oklch(0.22 0.03 155);
@@ -152,4 +154,9 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+@media print {
+  body { background: white; }
+  section { break-inside: avoid; }
 }
