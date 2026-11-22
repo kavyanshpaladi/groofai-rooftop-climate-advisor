@@ -1,46 +1,83 @@
-# GroofAI Explorer
+# groofai
 
-Build a mobile-friendly React + Tailwind app called "GroofAI". Green and white theme, minimal UI. No paid APIs, no API keys. Do NOT add login, extra pages, animations, or features I haven't listed.
+Find the best climate upgrade for your rooftop. groofai looks at your roof and recommends whether **solar panels, a green roof, a cool reflective coating, or rainwater harvesting** would help most, in about two minutes and with no sign-up.
 
-Pages: "/" landing page and "/map".
+**Live demo:** https://groofai.lovable.app
 
-Landing: headline "Find the best climate upgrade for your rooftop", three short cards (Cooler, Greener, Cleaner), and a "Find my roof" button linking to /map.
+## Screenshots
 
-/map:
+<!-- EDIT: drag 2-3 screenshots here: landing page, roof map, recommendation result -->
 
-- Full-screen react-leaflet map with Esri World Imagery tiles (https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}) and correct attribution. Start at Hyderabad (17.385, 78.4867), zoom 17.
+## Why This Project
 
-- Search box using the Nominatim API to jump to an address.
+Cities are getting hotter and flooding more, while rooftops are one of the most unused spaces people own. I built groofai to make it easy for anyone to see which upgrade suits their own roof, using plain-language explanations instead of technical reports.
 
-- At zoom >= 17, after the map stops moving for 800 ms, fetch buildings in the visible bounds from the Overpass API (way["building"]), convert them to GeoJSON, and draw them as semi-transparent green polygons. Cache by bounding box, show a small loading indicator, and show a friendly message if Overpass fails or rate-limits.
+## Features
 
-- Click a polygon to select it (orange highlight) and open a side panel (bottom sheet on mobile).
+<!-- EDIT: keep only what your app actually does -->
+- Search for an address with autocomplete, or draw your roof outline on a satellite map
+- Measures roof area and the usable area
+- Asks five short questions about roof type, shade, access, and budget
+- Recommends the best fit: solar, green roof, cool coating, or rain harvesting
+- Explains each recommendation in plain language
+- No sign-up required
 
-- "Draw my roof" button using leaflet-draw, for when no building polygon exists.
+## How It Works
 
-- Use Turf.js to calculate roof area in m². In the panel show Roof area and Usable area (65% of area, labelled "estimated"), plus the polygon centroid lat/lon.
+1. **Find your roof:** search your address or draw the outline on the map.
+2. **Answer five questions:** roof type, how much shade it gets, how you reach it, what matters most to you, and your budget.
+3. **Get your best fit:** the app combines your answers with local sun, heat, and rain data to recommend an upgrade.
 
-- "Try a sample roof" button that selects a hard-coded building near the start point.
+## Tech Stack
 
-Keep code clean: src/components, src/lib, src/pages. Stop after this; do not build the questionnaire or results yet.
+<!-- EDIT: check package.json and keep only what's true -->
+- TanStack Start, React, TypeScript
+- Vite
+- Tailwind CSS
+- Leaflet for the interactive map
+- Satellite imagery (Esri / Mapbox) and building outlines from OpenStreetMap
+- Photon for address search autocomplete
+- <!-- EDIT: add the source of your sun, heat, and rain data -->
+- Built with [Lovable](https://lovable.dev)
 
-This project was built with [Lovable](https://lovable.dev).
+## Run Locally
 
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/cfddc250-cea9-4334-bc97-7952a6128ff4).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+You need Node.js and npm installed.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+git clone https://github.com/vishruth1729/groofai-rooftop-climate-advisor.git
+cd groofai-rooftop-climate-advisor
+npm install
 npm run dev
 ```
+
+Then open http://localhost:8080 in your browser.
+
+<!-- EDIT: if the app needs a map token or other environment variable, list it here, for example:
+Create a `.env` file and add `VITE_MAPBOX_TOKEN=your_public_token` -->
+
+## Data Sources and Credits
+
+- Map imagery: Esri / Mapbox
+- Building outlines: © OpenStreetMap contributors
+- <!-- EDIT: add your sun, heat, and rain data sources -->
+
+## What I Learned
+
+<!-- EDIT: write 2-3 honest lines -->
+- Working with interactive maps and geographic data
+- Turning user inputs into a clear recommendation
+- Designing a simple, easy-to-follow user flow
+
+## Future Improvements
+
+<!-- EDIT: only list things you actually plan to do -->
+- Estimated cost and payback time for each upgrade
+- More accurate local climate data
+- Support for more cities and roof types
+
+## Author
+
+**Kavyansh Paladi**
+
+- GitHub: [@vishruth1729](https://github.com/kavyanshpaladi)
