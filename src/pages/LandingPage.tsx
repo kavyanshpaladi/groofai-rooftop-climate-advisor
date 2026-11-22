@@ -65,7 +65,7 @@ export function LandingPage() {
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">Cities trap heat, flood in heavy rain and burn fossil fuels for power. Your roof can help with all three. groofai checks your local sun, heat and rainfall to show which upgrade gives your roof the biggest win.</p>
         <div className="mt-12 grid gap-8 sm:grid-cols-3 [perspective:1000px]">
           {features.map((f) => (
-            <article key={f.title} className="card-3d group relative overflow-hidden rounded-3xl border border-border bg-card shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-primary hover:shadow-2xl">
+            <article key={f.title} className="feature-card group relative overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
               <div className="relative h-52 overflow-hidden">
                 <img src={f.img} alt={f.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" />
@@ -87,7 +87,7 @@ export function LandingPage() {
 
       <section className="howitworks text-primary-foreground">
         <div className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
-          <p className="mb-4 inline-flex rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] backdrop-blur">Two minutes · no sign-up</p>
+          <p className="badge-glow mb-5 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary shadow-xl"><span className="badge-dot size-2 rounded-full bg-primary" />Two minutes<span className="text-sun">✦</span>No sign-up</p>
           <h2 className="text-3xl font-bold sm:text-4xl">How it works</h2>
           <p className="mt-3 max-w-2xl text-base text-primary-foreground/85">Three steps from a blank rooftop to a decision you can explain — every number comes from your building's own sunlight, heat and rain.</p>
           <ol className="mt-10 grid gap-6 sm:grid-cols-3 [perspective:1000px]">

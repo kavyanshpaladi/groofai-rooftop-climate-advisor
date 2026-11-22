@@ -279,3 +279,16 @@
   footer { background: white !important; }
   footer * { color: var(--muted-foreground) !important; }
 }
+
+/* Feature cards: smooth rise-in and soft hover lift */
+@keyframes feature-in { from { opacity: 0; transform: translateY(40px) scale(.97); } to { opacity: 1; transform: none; } }
+.feature-card { animation: feature-in 1.1s cubic-bezier(.16,1,.3,1) both; transition: transform .7s cubic-bezier(.16,1,.3,1), box-shadow .7s cubic-bezier(.16,1,.3,1), border-color .5s ease; will-change: transform; }
+.feature-card:nth-child(2) { animation-delay: .18s; }
+.feature-card:nth-child(3) { animation-delay: .36s; }
+.feature-card:hover { transform: translateY(-10px); border-color: var(--primary); box-shadow: 0 30px 60px -25px color-mix(in oklab, var(--primary) 55%, transparent); }
+.feature-card img, .feature-card span, .feature-card .origin-left { transition-timing-function: cubic-bezier(.16,1,.3,1) !important; }
+/* "Two minutes / no sign-up" badge */
+.badge-glow { box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary-foreground) 25%, transparent), 0 12px 30px -10px color-mix(in oklab, var(--foreground) 50%, transparent); }
+.badge-dot { box-shadow: 0 0 0 0 var(--primary); animation: badge-pulse 2s ease-out infinite; }
+@keyframes badge-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 70%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+@media (prefers-reduced-motion: reduce), print { .feature-card, .badge-dot { animation: none; transform: none; } }
