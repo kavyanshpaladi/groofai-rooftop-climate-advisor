@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import { RoofCounter } from "@/components/RoofCounter";
 
 const cards = [
   { title: "Cooler", text: "Reflective and green roofs lower indoor heat." },
@@ -21,6 +22,7 @@ export function LandingPage() {
         ))}
       </div>
       <Button asChild className="mt-10 h-12 w-fit px-6"><Link to="/map">Find my roof</Link></Button>
+      <RoofCounter />
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { loadReport, type Report } from "@/lib/report";
 import { scoreOptions, type OptionId } from "@/lib/scoring";
 import { ASSUMPTION_LABELS, DEFAULT_ASSUMPTIONS, greenImpact, rainwaterImpact, reflectiveImpact, solarImpact, type Assumptions } from "@/lib/impact";
 import { BeforeAfter } from "@/components/BeforeAfter";
+import { logRoofReport } from "@/lib/roof-log";
 
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const num = (n: number) => Math.round(n).toLocaleString("en-IN");
@@ -16,6 +17,18 @@ export function ResultsPage() {
   useEffect(() => setReport(loadReport()), []);
 
   const scores = useMemo(() => report && scoreOptions(report.answers, { usable: report.usable, ...report.climate }), [report]);
+
+  useEffect(() => {
+    if (!report || !scores?.length) return;
+    try {
+      const s = solarImpact(report.usable, report.climate.irradiance, DEFAULT_ASSUMPTIONS);
+      const r = rainwaterImpact(report.usable, report.climate.rainfall, DEFAULT_ASSUMPTIONS);
+      const g = greenImpact(report.usable, DEFAULT_ASSUMPTIONS);
+      void logRoofReport(report, scores, { solarKw: s.kw, solarKwhYear: s.kwhYear, solarSavings: s.savings, solarCost: s.cost, rainLitresYear: r.litresYear, greenCo2: g.co2 });
+    } catch {
+      // never affect the page
+    }
+  }, [report, scores]);
 
   if (report === undefined) return null;
   if (!report || !scores) {
@@ -112,6 +125,7 @@ export function ResultsPage() {
 
       <p className="mt-6 rounded-lg bg-muted p-3 text-sm text-foreground">Planning estimate, not an engineering approval. Have a qualified professional inspect your roof.</p>
       <Button asChild variant="link" className="mt-6 px-0 print:hidden"><Link to="/map">← Back to map</Link></Button>
+      <p className="mt-2 text-xs text-muted-foreground print:hidden">Anonymous roof statistics are saved to improve this tool.</p>
     </main>
   );
 }
