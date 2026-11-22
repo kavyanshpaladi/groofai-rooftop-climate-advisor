@@ -7,9 +7,9 @@ import { Sun, Leaf, Droplets, Snowflake, ArrowRight, MapPin, ListChecks, Sparkle
 const HERO = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1600&q=80";
 
 const features = [
-  { icon: Snowflake, title: "Cooler", text: "Reflective coatings bounce sunlight away and cut indoor heat by several degrees.", img: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=800&q=80" },
-  { icon: Leaf, title: "Greener", text: "Rooftop gardens absorb rain, clean the air and bring life back to the city.", img: greenerImg.url },
-  { icon: Sun, title: "Cleaner", text: "Solar panels turn your idle roof into a quiet power plant that lowers your bill.", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80" },
+  { icon: Snowflake, title: "Cooler", stat: "Up to 5 °C cooler indoors", text: "A white reflective coating bounces up to 80% of sunlight back to the sky. Rooms under the roof stay cooler, fans and ACs work less, and your whole street feels less like an oven on summer afternoons.", points: ["Cheapest upgrade", "Done in a day"], img: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=800&q=80" },
+  { icon: Leaf, title: "Greener", stat: "Soaks up to 70% of rain", text: "A rooftop garden insulates your home, holds back storm water, filters dust from the air and gives birds and bees a place to live. It turns bare concrete into a calm green space you can actually enjoy.", points: ["Natural insulation", "Cleaner air"], img: greenerImg.url },
+  { icon: Sun, title: "Cleaner", stat: "Cut your power bill up to 90%", text: "Solar panels turn your idle roof into a silent power plant. Every panel saves tonnes of carbon over its 25-year life and pays itself back in a few years through lower electricity bills.", points: ["25-year lifespan", "Pays itself back"], img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80" },
 ];
 
 const steps = [
@@ -60,16 +60,26 @@ export function LandingPage() {
       </section>
 
       <section className="mx-auto max-w-5xl px-5 py-16">
-        <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Three ways your roof can fight climate change</h2>
-        <div className="mt-10 grid gap-6 sm:grid-cols-3 [perspective:1000px]">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Three upgrades, one roof</p>
+        <h2 className="mt-2 text-3xl font-black text-foreground sm:text-5xl">Three ways your roof can fight climate change</h2>
+        <p className="mt-4 max-w-2xl text-lg text-muted-foreground">Cities trap heat, flood in heavy rain and burn fossil fuels for power. Your roof can help with all three. groofai checks your local sun, heat and rainfall to show which upgrade gives your roof the biggest win.</p>
+        <div className="mt-12 grid gap-8 sm:grid-cols-3 [perspective:1000px]">
           {features.map((f) => (
-            <article key={f.title} className="card-3d group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-xl">
-              <div className="h-44 overflow-hidden"><img src={f.img} alt={f.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" /></div>
-              <div className="p-5">
-                <f.icon className="size-6 text-primary" />
-                <h3 className="mt-2 text-xl font-bold text-foreground">{f.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{f.text}</p>
+            <article key={f.title} className="card-3d group relative overflow-hidden rounded-3xl border border-border bg-card shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-primary hover:shadow-2xl">
+              <div className="relative h-52 overflow-hidden">
+                <img src={f.img} alt={f.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" />
+                <span className="absolute left-4 top-4 grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"><f.icon className="size-6" /></span>
+                <h3 className="absolute bottom-3 left-4 text-3xl font-black text-primary-foreground">{f.title}</h3>
               </div>
+              <div className="p-6">
+                <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{f.stat}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.text}</p>
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {f.points.map((pt) => <li key={pt} className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground">✓ {pt}</li>)}
+                </ul>
+              </div>
+              <div className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-primary transition-transform duration-500 group-hover:scale-x-100" />
             </article>
           ))}
         </div>
