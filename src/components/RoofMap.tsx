@@ -64,7 +64,7 @@ export default function RoofMap() {
       </MapContainer>
 
       <div className="absolute inset-x-3 top-3 z-[1000] flex flex-col gap-2 md:left-4 md:right-auto md:w-96">
-        <SearchBox onResult={(p) => map?.setView([p.lat, p.lon], 18)} />
+        <SearchBox map={map} />
         <div className="flex gap-2">
           <Button onClick={draw} disabled={!drawReady} variant="outline" className="bg-card px-3">Draw my roof</Button>
           <Button onClick={sample} variant="outline" className="bg-card px-3">Try a sample roof</Button>
