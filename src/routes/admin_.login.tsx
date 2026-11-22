@@ -8,10 +8,10 @@ export const Route = createFileRoute("/admin_/login")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Admin sign in — RoofWise" },
-      { name: "description", content: "Sign in to the RoofWise admin dashboard." },
-      { property: "og:title", content: "Admin sign in — RoofWise" },
-      { property: "og:description", content: "Sign in to the RoofWise admin dashboard." },
+      { title: "Admin sign in — GroofAI" },
+      { name: "description", content: "Sign in to the GroofAI admin dashboard." },
+      { property: "og:title", content: "Admin sign in — GroofAI" },
+      { property: "og:description", content: "Sign in to the GroofAI admin dashboard." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -69,7 +69,7 @@ function AdminLogin() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5">
-      <p className="text-sm font-semibold text-primary">RoofWise admin</p>
+      <p className="text-sm font-semibold text-primary">GroofAI admin</p>
       <h1 className="mt-1 text-2xl font-bold text-foreground">{mode === "signin" ? "Sign in" : "Create account"}</h1>
       <button
         type="button"

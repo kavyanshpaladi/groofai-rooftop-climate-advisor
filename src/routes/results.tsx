@@ -4,9 +4,9 @@ import { ResultsPage } from "@/pages/ResultsPage";
 export const Route = createFileRoute("/results")({
   head: () => ({
     meta: [
-      { title: "Your rooftop report — RoofWise" },
+      { title: "Your rooftop report — GroofAI" },
       { name: "description", content: "Suitability scores and rough impact estimates for your rooftop upgrade." },
-      { property: "og:title", content: "Your rooftop report — RoofWise" },
+      { property: "og:title", content: "Your rooftop report — GroofAI" },
       { property: "og:description", content: "See which climate upgrade fits your roof best." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

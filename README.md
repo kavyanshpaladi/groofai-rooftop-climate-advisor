@@ -1,6 +1,6 @@
-# RoofWise Explorer
+# GroofAI Explorer
 
-Build a mobile-friendly React + Tailwind app called "RoofWise". Green and white theme, minimal UI. No paid APIs, no API keys. Do NOT add login, extra pages, animations, or features I haven't listed.
+Build a mobile-friendly React + Tailwind app called "GroofAI". Green and white theme, minimal UI. No paid APIs, no API keys. Do NOT add login, extra pages, animations, or features I haven't listed.
 
 Pages: "/" landing page and "/map".
 

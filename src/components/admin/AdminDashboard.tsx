@@ -79,7 +79,7 @@ function Dashboard({ email, onLogout }: { email: string; onLogout: () => void })
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-primary">RoofWise admin</p>
+          <p className="text-sm font-semibold text-primary">GroofAI admin</p>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         </div>
         <div className="flex items-center gap-3">

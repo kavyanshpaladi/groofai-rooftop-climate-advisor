@@ -68,7 +68,7 @@ export function ResultsPage() {
     <main className="roof-results mx-auto max-w-3xl px-5 py-8 print:py-0">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-primary">RoofWise</p>
+          <p className="text-sm font-semibold text-primary">GroofAI</p>
           <h1 className="text-2xl font-bold text-foreground">Your rooftop report</h1>
           <p className="text-sm text-muted-foreground">Usable area {num(usable)} m² (estimated) · {report.lat.toFixed(4)}, {report.lon.toFixed(4)}</p>
         </div>

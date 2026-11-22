@@ -12,10 +12,10 @@ export const Route = createFileRoute("/admin")({
   },
   head: () => ({
     meta: [
-      { title: "Admin dashboard — RoofWise" },
-      { name: "description", content: "Anonymous roof statistics for RoofWise." },
-      { property: "og:title", content: "Admin dashboard — RoofWise" },
-      { property: "og:description", content: "Anonymous roof statistics for RoofWise." },
+      { title: "Admin dashboard — GroofAI" },
+      { name: "description", content: "Anonymous roof statistics for GroofAI." },
+      { property: "og:title", content: "Admin dashboard — GroofAI" },
+      { property: "og:description", content: "Anonymous roof statistics for GroofAI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
