@@ -210,3 +210,12 @@
   .roof-building, .leaflet-control-zoom a, .roof-results li.bg-secondary { transition: none; }
 }
 @media print { .result-card, .score-bar { animation: none; opacity: 1; transform: none; } }
+.search-pin { background: transparent; border: 0; }
+.search-pin-dot {
+  display: block; width: 18px; height: 18px; border-radius: 9999px;
+  background: var(--primary); border: 3px solid var(--card);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 30%, transparent);
+  animation: search-pin-fade 4s ease-in forwards;
+}
+@keyframes search-pin-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .search-pin-dot { animation: none; } }
