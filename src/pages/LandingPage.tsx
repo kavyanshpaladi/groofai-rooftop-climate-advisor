@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { RoofCounter } from "@/components/RoofCounter";
 import greenerImg from "@/assets/greener_rooftop.png.asset.json";
-import { Sun, Leaf, Droplets, Snowflake, ArrowRight } from "lucide-react";
+import { Sun, Leaf, Droplets, Snowflake, ArrowRight, MapPin, ListChecks, Sparkles } from "lucide-react";
 
 const HERO = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1600&q=80";
 
@@ -13,9 +13,33 @@ const features = [
 ];
 
 const steps = [
-  "Find your building on the satellite map",
-  "Answer five quick questions",
-  "Get your best-fit upgrade with real climate data",
+  {
+    n: "01",
+    title: "Find your roof",
+    text: "Open the live satellite map, search your address or draw the outline by hand. groofai measures the roof area and the usable part of it in seconds.",
+    icon: MapPin,
+    bar: "bg-rain",
+    chip: "bg-rain/15 text-rain",
+    num: "text-rain",
+  },
+  {
+    n: "02",
+    title: "Answer five questions",
+    text: "Roof type, how much shade it gets, how you reach it, what matters most to you and your budget. About two minutes, no sign-up and nothing stored.",
+    icon: ListChecks,
+    bar: "bg-sun",
+    chip: "bg-sun/20 text-sun",
+    num: "text-sun",
+  },
+  {
+    n: "03",
+    title: "Get your best fit",
+    text: "Solar, a rooftop garden, a cool reflective coating or rain harvesting are ranked against your local sun, heat and rain — with plain-language reasons.",
+    icon: Sparkles,
+    bar: "bg-leaf",
+    chip: "bg-leaf/20 text-leaf",
+    num: "text-leaf",
+  },
 ];
 
 export function LandingPage() {
@@ -51,23 +75,35 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-5xl px-5 py-16">
+      <section className="howitworks text-primary-foreground">
+        <div className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+          <p className="mb-4 inline-flex rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] backdrop-blur">Two minutes · no sign-up</p>
           <h2 className="text-3xl font-bold sm:text-4xl">How it works</h2>
-          <ol className="mt-8 grid gap-6 sm:grid-cols-3">
-            {steps.map((s, i) => (
-              <li key={s} className="card-3d rounded-2xl bg-primary-foreground/10 p-6">
-                <span className="text-5xl font-black opacity-60">0{i + 1}</span>
-                <p className="mt-3 font-semibold">{s}</p>
+          <p className="mt-3 max-w-2xl text-base text-primary-foreground/85">Three steps from a blank rooftop to a decision you can explain — every number comes from your building's own sunlight, heat and rain.</p>
+          <ol className="mt-10 grid gap-6 sm:grid-cols-3 [perspective:1000px]">
+            {steps.map((s) => (
+              <li key={s.n} className="card-3d relative rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
+                <span className={`inline-block h-1.5 w-12 rounded-full ${s.bar}`} />
+                <div className="mt-4 flex items-start justify-between">
+                  <span className={`grid size-11 place-items-center rounded-xl ${s.chip}`}>
+                    <s.icon className="size-5" />
+                  </span>
+                  <span className={`text-4xl font-black leading-none ${s.num}`}>{s.n}</span>
+                </div>
+                <h3 className="mt-4 text-lg font-bold text-foreground">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
               </li>
             ))}
           </ol>
-          <Button asChild variant="secondary" size="lg" className="mt-10 h-12 px-6"><Link to="/map">Start now</Link></Button>
-          <RoofCounter />
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <Button asChild variant="secondary" size="lg" className="h-12 px-6"><Link to="/map">Start now <ArrowRight /></Link></Button>
+            <RoofCounter />
+          </div>
         </div>
       </section>
-      <footer className="border-t border-border bg-background py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} groofai. All rights reserved.
+
+      <footer className="bg-footer-bg py-8 text-center">
+        <p className="text-sm font-medium text-footer-foreground">© {new Date().getFullYear()} groofai. All rights reserved.</p>
       </footer>
     </main>
   );

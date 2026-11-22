@@ -38,6 +38,11 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
   --color-roof-selection: var(--roof-selection);
+  --color-footer-bg: var(--footer-bg);
+  --color-footer-foreground: var(--footer-foreground);
+  --color-sun: var(--sun);
+  --color-leaf: var(--leaf);
+  --color-rain: var(--rain);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -77,6 +82,11 @@
   --roof-selection: oklch(0.7 0.18 50);
   --solar: oklch(0.35 0.08 255);
   --water: oklch(0.7 0.1 230);
+  --footer-bg: oklch(0.13 0.02 260);
+  --footer-foreground: oklch(0.68 0.01 250);
+  --sun: oklch(0.7 0.16 70);
+  --leaf: oklch(0.5 0.15 150);
+  --rain: oklch(0.55 0.13 245);
   --radius: 0.625rem;
   --background: oklch(0.99 0.005 150);
   --foreground: oklch(0.22 0.03 155);
@@ -255,3 +265,17 @@
 }
 /* Icon-only buttons: keep the icon centered on hover */
 [data-slot="button"].p-0:hover svg, [data-slot="button"][class*="size-9"]:hover svg { transform: scale(1.1); }
+
+/* "How it works" section: layered colour wash over the green base */
+.howitworks {
+  background:
+    radial-gradient(55% 75% at 10% 0%, color-mix(in oklab, var(--rain) 55%, transparent) 0%, transparent 62%),
+    radial-gradient(45% 65% at 88% 12%, color-mix(in oklab, var(--sun) 50%, transparent) 0%, transparent 60%),
+    radial-gradient(70% 85% at 45% 115%, color-mix(in oklab, var(--leaf) 55%, transparent) 0%, transparent 65%),
+    var(--primary);
+}
+@media print {
+  .howitworks { background: var(--primary); }
+  footer { background: white !important; }
+  footer * { color: var(--muted-foreground) !important; }
+}
