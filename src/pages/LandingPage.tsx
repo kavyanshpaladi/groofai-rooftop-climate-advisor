@@ -66,6 +66,9 @@ export function LandingPage() {
           <RoofCounter />
         </div>
       </section>
+      <footer className="border-t border-border bg-background py-6 text-center text-sm text-muted-foreground">
+        © {new Date().getFullYear()} groofai. All rights reserved.
+      </footer>
     </main>
   );
 }

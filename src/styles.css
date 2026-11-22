@@ -253,3 +253,5 @@
   [data-slot="button"], [data-slot="button"] svg, button.inline-flex { animation: none !important; transform: none !important; }
   [data-slot="button"]::after, button.inline-flex::after { display: none; }
 }
+/* Icon-only buttons: keep the icon centered on hover */
+[data-slot="button"].p-0:hover svg, [data-slot="button"][class*="size-9"]:hover svg { transform: scale(1.1); }
