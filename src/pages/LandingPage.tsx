@@ -7,7 +7,7 @@ const HERO = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=
 
 const features = [
   { icon: Snowflake, title: "Cooler", text: "Reflective coatings bounce sunlight away and cut indoor heat by several degrees.", img: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=800&q=80" },
-  { icon: Leaf, title: "Greener", text: "Rooftop gardens absorb rain, clean the air and bring life back to the city.", img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=80" },
+  { icon: Leaf, title: "Greener", text: "Rooftop gardens absorb rain, clean the air and bring life back to the city.", img: "https://images.unsplash.com/photo-1497250681960-ef046c08a56e?auto=format&fit=crop&w=800&q=80" },
   { icon: Sun, title: "Cleaner", text: "Solar panels turn your idle roof into a quiet power plant that lowers your bill.", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80" },
 ];
 
@@ -24,9 +24,9 @@ export function LandingPage() {
         <img src={HERO} alt="Solar panels on a sunny rooftop" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-foreground/80 via-foreground/60 to-background" />
         <div className="relative mx-auto max-w-5xl px-5 pb-24 pt-20 sm:pt-32">
-          <p className="mb-4 inline-flex rounded-full border border-primary-foreground/30 bg-primary/30 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground backdrop-blur">GroofAI</p>
+          <p className="mb-4 inline-flex rounded-full border border-primary-foreground/30 bg-primary/30 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground backdrop-blur">groofai</p>
           <h1 className="max-w-3xl text-4xl font-black leading-[1.05] text-primary-foreground sm:text-7xl">Find the best climate upgrade for your rooftop</h1>
-          <p className="mt-6 max-w-xl text-lg text-primary-foreground/85">Your roof is the most underused space you own. GroofAI reads satellite imagery and local sun, heat and rain data to tell you whether solar, a garden, a cool coating or rain harvesting fits you best — free, in two minutes.</p>
+          <p className="mt-6 max-w-xl text-lg text-primary-foreground/85">Your roof is the most underused space you own. groofai reads satellite imagery and local sun, heat and rain data to tell you whether solar, a garden, a cool coating or rain harvesting fits you best — free, in two minutes.</p>
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <Button asChild size="lg" className="h-14 px-8 text-base shadow-xl"><Link to="/map">Find my roof <ArrowRight /></Link></Button>
             <span className="text-sm text-primary-foreground/80"><Droplets className="mr-1 inline size-4" />No sign-up. No cost.</span>
