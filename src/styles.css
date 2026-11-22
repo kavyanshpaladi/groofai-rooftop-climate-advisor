@@ -219,3 +219,15 @@
 }
 @keyframes search-pin-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .search-pin-dot { animation: none; } }
+
+/* Landing 3D motion */
+@keyframes hero-rise { from { opacity: 0; transform: perspective(800px) rotateX(35deg) translateY(40px); } to { opacity: 1; transform: none; } }
+@keyframes hero-zoom { from { transform: scale(1.15); } to { transform: scale(1); } }
+@keyframes card-flip { from { opacity: 0; transform: rotateY(-25deg) translateZ(-60px); } to { opacity: 1; transform: none; } }
+.hero-3d { animation: hero-rise 1s cubic-bezier(.2,.8,.2,1) both; transform-origin: bottom; }
+.hero-zoom { animation: hero-zoom 8s ease-out both; }
+.card-3d { animation: card-flip .8s cubic-bezier(.2,.8,.2,1) both; transition: transform .4s, box-shadow .4s; transform-style: preserve-3d; }
+.card-3d:nth-child(2) { animation-delay: .15s; }
+.card-3d:nth-child(3) { animation-delay: .3s; }
+.card-3d:hover { transform: perspective(900px) rotateX(6deg) rotateY(-8deg) translateY(-8px) scale(1.03); }
+@media (prefers-reduced-motion: reduce), print { .hero-3d, .hero-zoom, .card-3d { animation: none; transform: none; } }
