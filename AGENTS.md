@@ -31,4 +31,4 @@ use the editor.
 
 - Use the shared Button variants for app actions and questionnaire choices, and global CSS for map interaction and entrance motion; this keeps states consistent without adding animation libraries.
 - Disable entrance and score animations for reduced-motion preferences and printing so reports remain readable.
-- Admin rights come only from public.user_roles via has_role(); admin emails live in the app-unreachable public.admin_emails table and are granted on email confirmation, so signups can't self-promote.
+- Admin rights come only from public.user_roles via has_role(); admin emails live in the app-unreachable public.admin_emails table and are granted when a verified email (email confirmation or Google sign-in) matches, so signups can't self-promote.
