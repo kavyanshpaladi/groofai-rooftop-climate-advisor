@@ -8,13 +8,8 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import { BuildingsLayer, toLatLngs } from "./BuildingsLayer";
 import { SearchBox } from "./SearchBox";
 import { RoofPanel } from "./RoofPanel";
+import { Loader2, X } from "lucide-react";
 import { SAMPLE_ROOF, START } from "@/lib/roof";
-import { MousePointerClick } from "lucide-react";
-import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
-import centroid from "@turf/centroid";
-import { fetchBuildingsAround } from "@/lib/overpass";
-
-const NOT_FOUND = "No building found here. Try zooming in or use Draw my roof.";
 
 export default function RoofMap() {
   const [map, setMap] = useState<L.Map | null>(null);
@@ -23,40 +18,9 @@ export default function RoofMap() {
   const [selected, setSelected] = useState<Feature<GPolygon> | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [drawReady, setDrawReady] = useState(false);
-  const [tapMode, setTapMode] = useState(false);
-  const [tapBusy, setTapBusy] = useState(false);
-  const [tapMsg, setTapMsg] = useState<string | null>(null);
   const drawRef = useRef<L.Draw.Polygon | null>(null);
-  const busyRef = useRef(false);
 
   const stopDraw = () => { drawRef.current?.disable(); drawRef.current = null; };
-  const setTap = (on: boolean) => { setTapMode(on); setTapMsg(null); if (on) stopDraw(); };
-
-  useEffect(() => {
-    if (!map || !tapMode) return;
-    const el = map.getContainer();
-    el.style.cursor = "crosshair";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setTap(false); };
-    const onClick = async (e: L.LeafletMouseEvent) => {
-      if (busyRef.current) return;
-      const { lat, lng } = e.latlng;
-      const pt: [number, number] = [lng, lat];
-      const hit = data?.features.find((f) => booleanPointInPolygon(pt, f));
-      if (hit) { setSelected(hit); setTap(false); return; }
-      busyRef.current = true; setTapBusy(true); setTapMsg(null);
-      try {
-        const fc = await fetchBuildingsAround(lat, lng);
-        const inside = fc.features.find((f) => booleanPointInPolygon(pt, f));
-        const d = (f: Feature<GPolygon>) => { const [x, y] = centroid(f).geometry.coordinates as [number, number]; return (x - lng) ** 2 + (y - lat) ** 2; };
-        const found = inside ?? [...fc.features].sort((a, b) => d(a) - d(b))[0];
-        if (found) { setSelected(found); setTap(false); } else setTapMsg(NOT_FOUND);
-      } catch { setTapMsg(NOT_FOUND); }
-      finally { busyRef.current = false; setTapBusy(false); }
-    };
-    map.on("click", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => { el.style.cursor = ""; map.off("click", onClick); document.removeEventListener("keydown", onKey); };
-  }, [map, tapMode, data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!map) return;
@@ -77,7 +41,6 @@ export default function RoofMap() {
 
   const draw = () => {
     if (!map || !drawReady) return;
-    setTap(false);
     stopDraw();
     drawRef.current = new L.Draw.Polygon(map as L.DrawMap, { shapeOptions: { className: "roof-selected" } });
     drawRef.current.enable();
@@ -92,7 +55,7 @@ export default function RoofMap() {
 
   return (
     <div className={`roof-map relative h-dvh w-full ${selected ? "roof-map-selected" : ""}`}>
-      <MapContainer center={START} zoom={17} maxZoom={21} scrollWheelZoom ref={setMap} className="h-full w-full" zoomControl={false}>
+      <MapContainer center={START} zoom={17} maxZoom={21} scrollWheelZoom preferCanvas ref={setMap} className="h-full w-full" zoomControl={false}>
         <ZoomControl position="bottomleft" />
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -102,7 +65,7 @@ export default function RoofMap() {
         />
         <BuildingsLayer data={data} selectedId={selectedId} onData={setData} onStatus={setStatus} onSelect={setSelected} retryKey={retryKey} />
         {selected && (
-          <Polygon positions={toLatLngs(selected)} pathOptions={{ className: "roof-selected", weight: 3, fillOpacity: 0.45 }} />
+          <Polygon positions={toLatLngs(selected)} pathOptions={{ color: "#1d4ed8", fillColor: "#1d4ed8", weight: 4, fillOpacity: 0.55 }} />
         )}
       </MapContainer>
 
@@ -111,15 +74,13 @@ export default function RoofMap() {
         <div className="flex gap-2">
           <Button onClick={draw} disabled={!drawReady} variant="outline" className="bg-card px-3">Draw my roof</Button>
           <Button onClick={sample} variant="outline" className="bg-card px-3">Try a sample roof</Button>
-          <Button onClick={() => setTap(!tapMode)} variant={tapMode ? "default" : "outline"} aria-pressed={tapMode} className={tapMode ? "px-3" : "bg-card px-3"}><MousePointerClick />Tap a building</Button>
         </div>
-        {tapMode && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tapBusy ? "Finding building…" : "Tap any building to select its roof"}</p>}
-        {tapMode && tapMsg && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-destructive shadow-sm">{tapMsg}</p>}
-        {status.loading && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Loading buildings…</p>}
+        {status.loading && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />Loading buildings...</p>}
         {status.error && (
           <div className="flex w-fit items-center gap-2 rounded-md bg-card px-2 py-1 text-xs shadow-sm">
             <span className="text-destructive">{status.error}</span>
             <Button onClick={() => setRetryKey((k) => k + 1)} size="sm" className="h-6 px-2">Retry</Button>
+            <Button onClick={() => setStatus({ loading: false, error: null })} size="icon" variant="ghost" className="size-6" aria-label="Dismiss"><X /></Button>
           </div>
         )}
         {map && !status.loading && !status.error && !data && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Zoom in to see buildings</p>}

@@ -44,8 +44,8 @@ export async function fetchBuildings(b: BBox, signal?: AbortSignal) {
   return fc;
 }
 
-export function fetchBuildingsAround(lat: number, lon: number, signal?: AbortSignal) {
-  return runQuery(`[out:json][timeout:15];way(around:15,${lat},${lon})["building"];out geom;`, signal);
+export function fetchBuildingsLight(b: BBox, signal?: AbortSignal) {
+  return runQuery(`[out:json][timeout:20];way["building"](${b.south},${b.west},${b.north},${b.east});out skel geom qt;`, signal);
 }
 
 async function runQuery(query: string, signal?: AbortSignal) {
