@@ -39,7 +39,16 @@ export async function fetchBuildings(b: BBox, signal?: AbortSignal) {
   const key = bboxKey(b);
   const hit = cache.get(key);
   if (hit) return hit;
-  const query = `[out:json][timeout:15];way["building"](${b.south},${b.west},${b.north},${b.east});out geom;`;
+  const fc = await runQuery(`[out:json][timeout:15];way["building"](${b.south},${b.west},${b.north},${b.east});out geom;`, signal);
+  cache.set(key, fc);
+  return fc;
+}
+
+export function fetchBuildingsAround(lat: number, lon: number, signal?: AbortSignal) {
+  return runQuery(`[out:json][timeout:15];way(around:15,${lat},${lon})["building"];out geom;`, signal);
+}
+
+async function runQuery(query: string, signal?: AbortSignal) {
   let json: { elements: OverpassWay[] } | null = null;
   let busy = false;
   for (let attempt = 0; attempt < 2 && !json; attempt++) {
@@ -63,7 +72,5 @@ export async function fetchBuildings(b: BBox, signal?: AbortSignal) {
     if (!json && attempt === 0) await new Promise((r) => setTimeout(r, 1500));
   }
   if (!json) throw new Error(busy ? "busy" : "failed");
-  const fc = toGeoJSON(json.elements ?? []);
-  cache.set(key, fc);
-  return fc;
+  return toGeoJSON(json.elements ?? []);
 }
