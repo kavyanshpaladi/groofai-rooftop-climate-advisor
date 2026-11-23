@@ -48,6 +48,10 @@ export function fetchBuildingsLight(b: BBox, signal?: AbortSignal) {
   return runQuery(`[out:json][timeout:20];way["building"](${b.south},${b.west},${b.north},${b.east});out skel geom qt;`, signal);
 }
 
+export function fetchBuildingsAround(lat: number, lon: number, signal?: AbortSignal) {
+  return runQuery(`[out:json][timeout:15];way(around:15,${lat},${lon})["building"];out skel geom qt;`, signal);
+}
+
 async function runQuery(query: string, signal?: AbortSignal) {
   let json: { elements: OverpassWay[] } | null = null;
   let busy = false;
