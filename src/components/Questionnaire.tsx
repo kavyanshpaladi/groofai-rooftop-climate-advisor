@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Answers } from "@/lib/scoring";
+import { BUDGET_LABELS, type Answers, type Budget } from "@/lib/scoring";
 
 type Q<K extends keyof Answers> = { key: K; label: string; options: { value: Answers[K]; label: string }[] };
 
@@ -9,7 +9,7 @@ const QUESTIONS = [
   { key: "shade", label: "Shade", options: [{ value: "none", label: "None" }, { value: "some", label: "Some" }, { value: "heavy", label: "Heavy" }] },
   { key: "access", label: "Access", options: [{ value: "easy", label: "Easy" }, { value: "limited", label: "Limited" }] },
   { key: "priority", label: "Priority", options: [{ value: "bill", label: "Electricity bill" }, { value: "cooler", label: "Cooler rooms" }, { value: "garden", label: "Garden" }, { value: "rainwater", label: "Rainwater" }] },
-  { key: "budget", label: "Budget", options: [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }] },
+  { key: "budget", label: "Budget", options: (Object.keys(BUDGET_LABELS) as Budget[]).map((value) => ({ value, label: BUDGET_LABELS[value] })) },
 ] as Q<keyof Answers>[];
 
 export type Draft = Partial<Answers>;
@@ -17,7 +17,7 @@ export type Draft = Partial<Answers>;
 export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v: Draft) => void }) {
   return (
     <div className="space-y-3">
-      <p aria-live="polite" className="text-xs font-medium text-muted-foreground">{QUESTIONS.filter((q) => value[q.key]).length} of 5 answered</p>
+      <p aria-live="polite" className="text-xs font-medium text-muted-foreground">{QUESTIONS.filter((q) => value[q.key]).length} of {QUESTIONS.length} answered</p>
       {QUESTIONS.map((q) => (
         <div key={q.key}>
           <p className="mb-1 text-xs font-medium text-muted-foreground">{q.label}</p>

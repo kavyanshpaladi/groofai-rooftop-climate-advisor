@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { BUDGET_LABELS, type Budget } from "@/lib/scoring";
 import { computeStats, optionLabel, OPTIONS, toCsv, type ReportRow } from "./stats";
 
 const ReportsMap = lazy(() => import("./ReportsMap"));
@@ -152,7 +153,7 @@ function Dashboard({ email, onLogout }: { email: string; onLogout: () => void })
                       <td className="pr-3">{optionLabel(r.best_option)}</td>
                       <td className="pr-3">{num(Number(r.roof_area ?? 0))} m²</td>
                       <td className="pr-3 capitalize">{String(r.answers?.["priority"] ?? "—")}</td>
-                      <td className="pr-3 capitalize">{String(r.answers?.["budget"] ?? "—")}</td>
+                      <td className="pr-3 whitespace-nowrap">{BUDGET_LABELS[String(r.answers?.["budget"]) as Budget] ?? "—"}</td>
                       <td className="text-right">
                         <Button variant="ghost" size="sm" className="text-destructive" disabled={del.isPending}
                           onClick={() => { if (window.confirm("Delete this report? This cannot be undone.")) del.mutate(r.id); }}>Delete</Button>

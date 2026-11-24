@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Feature, Polygon } from "geojson";
-import { roofStats } from "@/lib/roof";
+import { outlineCoords, roofStats } from "@/lib/roof";
 import { fetchClimate, type Climate } from "@/lib/climate";
 import { saveReport } from "@/lib/report";
 import { Questionnaire, isComplete, type Draft } from "./Questionnaire";
@@ -15,17 +15,19 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
   const [draft, setDraft] = useState<Draft>({});
   const navigate = useNavigate();
 
+  // Climate data is regional, so nudging the outline doesn't refetch it; a new spot does (after a short pause).
+  const cLat = Math.round(s.lat * 100) / 100, cLon = Math.round(s.lon * 100) / 100;
   useEffect(() => {
     let live = true;
     setClimate(null);
-    fetchClimate(s.lat, s.lon).then((c) => live && setClimate(c));
-    return () => { live = false; };
-  }, [s.lat, s.lon]);
+    const t = setTimeout(() => { fetchClimate(cLat, cLon).then((c) => live && setClimate(c)); }, 300);
+    return () => { live = false; clearTimeout(t); };
+  }, [cLat, cLon]);
 
   const ready = climate && isComplete(draft);
   const go = () => {
     if (!climate || !isComplete(draft)) return;
-    saveReport({ area: s.area, usable: s.usable, lat: s.lat, lon: s.lon, climate, answers: { roofType: draft.roofType, shade: draft.shade, access: draft.access, priority: draft.priority, budget: draft.budget } });
+    saveReport({ area: s.area, usable: s.usable, lat: s.lat, lon: s.lon, climate, outline: outlineCoords(roof), answers: { roofType: draft.roofType, shade: draft.shade, access: draft.access, priority: draft.priority, budget: draft.budget } });
     navigate({ to: "/results" });
   };
 
@@ -37,6 +39,7 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
       </div>
       <dl className="space-y-2 text-sm">
         <Row label="Roof area" value={`${fmt(s.area)} m²`} />
+        <p className="text-xs text-muted-foreground">Outline from map data. Adjust it to match your roof for a better estimate.</p>
         <Row label={<>Usable area <span className="text-xs">(estimated)</span></>} value={`${fmt(s.usable)} m²`} accent />
         <Row label="Centroid" value={<span className="font-mono text-xs">{s.lat.toFixed(5)}, {s.lon.toFixed(5)}</span>} />
       </dl>

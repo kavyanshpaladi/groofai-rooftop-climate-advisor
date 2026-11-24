@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Polygon, useMap, useMapEvents } from "react-leaflet";
 import type { Feature, FeatureCollection, Polygon as GPolygon } from "geojson";
+import area from "@turf/area";
 import { fetchBuildingsLight } from "@/lib/overpass";
+import { MIN_ROOF_AREA, shiftFeature, type Offset } from "@/lib/roof";
+import { themeColor } from "@/lib/map-colors";
 
 type Props = {
   active: boolean;
@@ -10,15 +13,20 @@ type Props = {
   onData: (fc: FeatureCollection<GPolygon> | null) => void;
   onStatus: (s: { loading: boolean; error: string | null }) => void;
   retryKey: number;
-  onSelect: (f: Feature<GPolygon>) => void;
+  // Shift applied to every building outline before it is shown or picked.
+  offset: Offset;
 };
 
 const TILE = 0.003;
 const MAX = 1500;
-const BASE = { color: "#3b82f6", fillColor: "#3b82f6", weight: 1, fillOpacity: 0.25 };
-const HOVER = { color: "#1d4ed8", fillColor: "#2563eb", weight: 2, fillOpacity: 0.45 };
+// Thin, light outlines so the satellite roofs underneath stay readable.
+const style = (hover: boolean) => {
+  const c = themeColor("--primary", "#2563eb");
+  // smoothFactor 0: draw every corner of the building, never simplified at any zoom.
+  return { color: c, fillColor: c, weight: hover ? 1.5 : 1, opacity: hover ? 1 : 0.8, fillOpacity: hover ? 0.2 : 0.06, smoothFactor: 0 };
+};
 const tiles = new Map<string, Feature<GPolygon>[]>();
-const SS = "groofai-tile-v2-";
+const SS = "groofai-tile-v3-";
 
 function getTile(k: string) {
   const hit = tiles.get(k);
@@ -45,7 +53,7 @@ async function fillTiles(missing: [number, number][], signal?: AbortSignal) {
     if (typeof lon !== "number" || typeof lat !== "number") continue;
     buckets.get(`${Math.floor(lat / TILE)},${Math.floor(lon / TILE)}`)?.push(f);
   }
-  buckets.forEach((f, k) => putTile(k, f));
+  buckets.forEach((f, k) => putTile(k, f.filter((b) => area(b) >= MIN_ROOF_AREA)));
 }
 
 // All buildings in the given bounds, using cached tiles and fetching only the missing ones.
@@ -68,11 +76,14 @@ export async function loadBuildingsIn(b: { getSouth(): number; getNorth(): numbe
 
 const toLatLngs = (f: Feature<GPolygon>): [number, number][] => (f.geometry.coordinates[0] ?? []).flatMap(([lon, lat]) => typeof lon === "number" && typeof lat === "number" ? [[lat, lon] as [number, number]] : []);
 
-export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect, retryKey }: Props) {
+export function BuildingsLayer({ active, selectedId, onData, onStatus, retryKey, offset }: Props) {
   const map = useMap();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ctrl = useRef<AbortController | null>(null);
-  const [view, setView] = useState<Feature<GPolygon>[]>([]);
+  // Raw outlines in view; null when zoomed out too far to show any.
+  const [view, setView] = useState<Feature<GPolygon>[] | null>(null);
+  const shown = useMemo(() => view?.map((f) => shiftFeature(f, offset)) ?? null, [view, offset]);
+  useEffect(() => { onData(shown ? { type: "FeatureCollection", features: shown } : null); }, [shown]); // eslint-disable-line react-hooks/exhaustive-deps
   const activeRef = useRef(active);
   activeRef.current = active;
 
@@ -88,9 +99,7 @@ export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect,
   };
 
   const show = (keys: string[]) => {
-    const fc = collect(keys);
-    setView(fc);
-    onData({ type: "FeatureCollection", features: fc });
+    setView(collect(keys));
   };
 
   const load = () => {
@@ -98,7 +107,7 @@ export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect,
     timer.current = setTimeout(async () => {
       ctrl.current?.abort();
       if (!activeRef.current) { onStatus({ loading: false, error: null }); return; }
-      if (map.getZoom() < 17) { setView([]); onData(null); onStatus({ loading: false, error: null }); return; }
+      if (map.getZoom() < 17) { setView(null); onStatus({ loading: false, error: null }); return; }
       const b = map.getBounds();
       const i0 = Math.floor(b.getSouth() / TILE), i1 = Math.floor(b.getNorth() / TILE);
       const j0 = Math.floor(b.getWest() / TILE), j1 = Math.floor(b.getEast() / TILE);
@@ -127,18 +136,19 @@ export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect,
   useEffect(() => { load(); return () => { clearTimeout(timer.current); ctrl.current?.abort(); }; }, [retryKey, active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!active) return null;
+  const base = style(false), hover = style(true);
 
   return (
     <>
-      {view.map((f) => {
+      {(shown ?? []).map((f) => {
         const id = String(f.properties?.["id"]);
         if (id === selectedId) return null;
         return (
-          <Polygon key={id} positions={toLatLngs(f)} pathOptions={BASE}
+          // Selection is handled by the map's own click so a tap is only ever counted once.
+          <Polygon key={id} positions={toLatLngs(f)} pathOptions={base}
             eventHandlers={{
-              click: () => onSelect(f),
-              mouseover: (e) => e.target.setStyle(HOVER),
-              mouseout: (e) => e.target.setStyle(BASE),
+              mouseover: (e) => e.target.setStyle(hover),
+              mouseout: (e) => e.target.setStyle(base),
             }} />
         );
       })}
