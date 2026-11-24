@@ -4,6 +4,7 @@ import type { Feature, FeatureCollection, Polygon as GPolygon } from "geojson";
 import { fetchBuildingsLight } from "@/lib/overpass";
 
 type Props = {
+  active: boolean;
   data: FeatureCollection<GPolygon> | null;
   selectedId: string | null;
   onData: (fc: FeatureCollection<GPolygon> | null) => void;
@@ -35,11 +36,13 @@ function putTile(k: string, f: Feature<GPolygon>[]) {
 
 const toLatLngs = (f: Feature<GPolygon>): [number, number][] => (f.geometry.coordinates[0] ?? []).flatMap(([lon, lat]) => typeof lon === "number" && typeof lat === "number" ? [[lat, lon] as [number, number]] : []);
 
-export function BuildingsLayer({ selectedId, onData, onStatus, onSelect, retryKey }: Props) {
+export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect, retryKey }: Props) {
   const map = useMap();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ctrl = useRef<AbortController | null>(null);
   const [view, setView] = useState<Feature<GPolygon>[]>([]);
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   const collect = (keys: string[]) => {
     const seen = new Set<string>(); const out: Feature<GPolygon>[] = [];
@@ -62,6 +65,7 @@ export function BuildingsLayer({ selectedId, onData, onStatus, onSelect, retryKe
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       ctrl.current?.abort();
+      if (!activeRef.current) { onStatus({ loading: false, error: null }); return; }
       if (map.getZoom() < 17) { setView([]); onData(null); onStatus({ loading: false, error: null }); return; }
       const b = map.getBounds();
       const i0 = Math.floor(b.getSouth() / TILE), i1 = Math.floor(b.getNorth() / TILE);
@@ -97,7 +101,9 @@ export function BuildingsLayer({ selectedId, onData, onStatus, onSelect, retryKe
   };
 
   useMapEvents({ moveend: load });
-  useEffect(() => { load(); return () => { clearTimeout(timer.current); ctrl.current?.abort(); }; }, [retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); return () => { clearTimeout(timer.current); ctrl.current?.abort(); }; }, [retryKey, active]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!active) return null;
 
   return (
     <>

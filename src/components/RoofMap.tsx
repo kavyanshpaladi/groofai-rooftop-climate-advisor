@@ -23,40 +23,41 @@ export default function RoofMap() {
   const [selected, setSelected] = useState<Feature<GPolygon> | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [drawReady, setDrawReady] = useState(false);
-  const [tapMode, setTapMode] = useState(false);
+  const [mode, setMode] = useState<"none" | "draw" | "tap">("none");
   const [tapBusy, setTapBusy] = useState(false);
   const [tapMsg, setTapMsg] = useState<string | null>(null);
-  const drawRef = useRef<L.Draw.Polygon | null>(null);
   const busyRef = useRef(false);
 
-  const stopDraw = () => { drawRef.current?.disable(); drawRef.current = null; };
-  const setTap = (on: boolean) => { setTapMode(on); setTapMsg(null); if (on) stopDraw(); };
+  const pick = (f: Feature<GPolygon>) => { setSelected(f); setMode("none"); };
+  const toggle = (m: "draw" | "tap") => setMode((cur) => (cur === m ? "none" : m));
+
+  useEffect(() => { setTapMsg(null); }, [mode]);
 
   useEffect(() => {
-    if (!map || !tapMode) return;
+    if (!map || mode !== "tap") return;
     const el = map.getContainer();
     el.style.cursor = "crosshair";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setTap(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMode("none"); };
     const onClick = async (e: L.LeafletMouseEvent) => {
       if (busyRef.current) return;
       const { lat, lng } = e.latlng;
       const pt: [number, number] = [lng, lat];
       const hit = data?.features.find((f) => booleanPointInPolygon(pt, f));
-      if (hit) { setSelected(hit); setTap(false); return; }
+      if (hit) { pick(hit); return; }
       busyRef.current = true; setTapBusy(true); setTapMsg(null);
       try {
         const fc = await fetchBuildingsAround(lat, lng);
         const inside = fc.features.find((f) => booleanPointInPolygon(pt, f));
         const d = (f: Feature<GPolygon>) => { const [x, y] = centroid(f).geometry.coordinates as [number, number]; return (x - lng) ** 2 + (y - lat) ** 2; };
         const found = inside ?? [...fc.features].sort((a, b) => d(a) - d(b))[0];
-        if (found) { setSelected(found); setTap(false); } else setTapMsg(NOT_FOUND);
+        if (found) pick(found); else setTapMsg(NOT_FOUND);
       } catch { setTapMsg(NOT_FOUND); }
       finally { busyRef.current = false; setTapBusy(false); }
     };
     map.on("click", onClick);
     document.addEventListener("keydown", onKey);
     return () => { el.style.cursor = ""; map.off("click", onClick); document.removeEventListener("keydown", onKey); };
-  }, [map, tapMode, data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, mode, data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!map) return;
@@ -66,25 +67,26 @@ export default function RoofMap() {
       await import("leaflet-draw");
       const onCreated = (e: L.LeafletEvent) => {
         const gj = (e as L.DrawEvents.Created).layer.toGeoJSON() as Feature<GPolygon>;
-        setSelected({ ...gj, id: "drawn", properties: { id: `drawn-${Date.now()}` } });
+        pick({ ...gj, id: "drawn", properties: { id: `drawn-${Date.now()}` } });
       };
+      const onStop = () => setMode((cur) => (cur === "draw" ? "none" : cur));
       map.on(L.Draw.Event.CREATED, onCreated);
-      off = () => map.off(L.Draw.Event.CREATED, onCreated);
+      map.on(L.Draw.Event.DRAWSTOP, onStop);
+      off = () => { map.off(L.Draw.Event.CREATED, onCreated); map.off(L.Draw.Event.DRAWSTOP, onStop); };
       setDrawReady(true);
     })();
     return () => off();
-  }, [map]);
+  }, [map]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const draw = () => {
-    if (!map || !drawReady) return;
-    setTap(false);
-    stopDraw();
-    drawRef.current = new L.Draw.Polygon(map as L.DrawMap, { shapeOptions: { className: "roof-selected" } });
-    drawRef.current.enable();
-  };
+  useEffect(() => {
+    if (!map || !drawReady || mode !== "draw") return;
+    const tool = new L.Draw.Polygon(map as L.DrawMap, { shapeOptions: { className: "roof-selected" } });
+    tool.enable();
+    return () => { tool.disable(); };
+  }, [map, drawReady, mode]);
 
   const sample = () => {
-    setSelected(SAMPLE_ROOF);
+    pick(SAMPLE_ROOF);
     map?.setView(START, 19);
   };
 
@@ -100,30 +102,30 @@ export default function RoofMap() {
           maxNativeZoom={19}
           maxZoom={21}
         />
-        <BuildingsLayer data={data} selectedId={selectedId} onData={setData} onStatus={setStatus} onSelect={setSelected} retryKey={retryKey} />
+        <BuildingsLayer active={mode === "tap"} data={data} selectedId={selectedId} onData={setData} onStatus={setStatus} onSelect={pick} retryKey={retryKey} />
         {selected && (
           <Polygon positions={toLatLngs(selected)} pathOptions={{ color: "#1d4ed8", fillColor: "#1d4ed8", weight: 4, fillOpacity: 0.55 }} />
         )}
       </MapContainer>
 
       <div className="absolute inset-x-3 top-3 z-[1000] flex flex-col gap-2 md:left-4 md:right-auto md:w-96">
-        <SearchBox map={map} />
+        <SearchBox map={map} onSearch={() => setMode("none")} />
         <div className="flex gap-2">
-          <Button onClick={draw} disabled={!drawReady} variant="outline" className="bg-card px-3">Draw my roof</Button>
+          <Button onClick={() => toggle("draw")} disabled={!drawReady} variant={mode === "draw" ? "default" : "outline"} aria-pressed={mode === "draw"} className={mode === "draw" ? "px-3" : "bg-card px-3"}>Draw my roof</Button>
           <Button onClick={sample} variant="outline" className="bg-card px-3">Try a sample roof</Button>
-          <Button onClick={() => setTap(!tapMode)} variant={tapMode ? "default" : "outline"} aria-pressed={tapMode} className={tapMode ? "px-3" : "bg-card px-3"}><MousePointerClick />Tap a building</Button>
+          <Button onClick={() => toggle("tap")} variant={mode === "tap" ? "default" : "outline"} aria-pressed={mode === "tap"} className={mode === "tap" ? "px-3" : "bg-card px-3"}><MousePointerClick />Tap a building</Button>
         </div>
-        {tapMode && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tapBusy ? "Finding building…" : "Tap any building to select its roof"}</p>}
-        {tapMode && tapMsg && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-destructive shadow-sm">{tapMsg}</p>}
-        {status.loading && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />Loading buildings...</p>}
-        {status.error && (
+        {mode === "tap" && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tapBusy ? "Finding building…" : "Tap a building to select its roof"}</p>}
+        {mode === "tap" && tapMsg && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-destructive shadow-sm">{tapMsg}</p>}
+        {mode === "tap" && status.loading && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />Loading buildings...</p>}
+        {mode === "tap" && status.error && (
           <div className="flex w-fit items-center gap-2 rounded-md bg-card px-2 py-1 text-xs shadow-sm">
             <span className="text-destructive">{status.error}</span>
             <Button onClick={() => setRetryKey((k) => k + 1)} size="sm" className="h-6 px-2">Retry</Button>
             <Button onClick={() => setStatus({ loading: false, error: null })} size="icon" variant="ghost" className="size-6" aria-label="Dismiss"><X /></Button>
           </div>
         )}
-        {map && !status.loading && !status.error && !data && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Zoom in to see buildings</p>}
+        {mode === "tap" && map && !status.loading && !status.error && !data && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Zoom in to see buildings</p>}
       </div>
 
       {selected && <RoofPanel roof={selected} onClose={() => setSelected(null)} />}

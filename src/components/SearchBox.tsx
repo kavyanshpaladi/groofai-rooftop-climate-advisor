@@ -8,7 +8,7 @@ import { fetchSuggestions, searchAddress, type Place, type Suggestion } from "@/
 
 const PIN_MS = 4000;
 
-export function SearchBox({ map }: { map: L.Map | null }) {
+export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () => void }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -77,6 +77,7 @@ export function SearchBox({ map }: { map: L.Map | null }) {
     ctrlRef.current?.abort();
     skipRef.current = true;
     setQ(s.name); setResults([]); setOpen(false); setActive(-1); setLoading(false); setMsg(null);
+    onSearch?.();
     flyTo(s);
   }
 
@@ -86,7 +87,7 @@ export function SearchBox({ map }: { map: L.Map | null }) {
     setLoading(true); setMsg(null);
     try {
       const p = await searchAddress(term);
-      if (p) flyTo(p); else setMsg("No places found.");
+      if (p) { onSearch?.(); flyTo(p); } else setMsg("No places found.");
     } catch { toast.error("Search is unavailable right now."); }
     finally { setLoading(false); }
   }
