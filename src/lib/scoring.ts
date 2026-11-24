@@ -4,7 +4,6 @@ export type Answers = {
   access: "easy" | "limited";
   priority: "bill" | "cooler" | "garden" | "rainwater";
   budget: "low" | "medium" | "high";
-  bill: number;
 };
 
 export type ScoreInputs = { usable: number; irradiance: number; maxTemp: number; rainfall: number };

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { scoreOptions, type Answers } from "./scoring";
-import { solarImpact, DEFAULT_ASSUMPTIONS, rainwaterImpact } from "./impact";
+import { solarImpact, solarProjection, co2Avoided, familyWaterDays, heatRisk, DEFAULT_ASSUMPTIONS, rainwaterImpact } from "./impact";
 
-const base: Answers = { roofType: "flat", shade: "none", access: "easy", priority: "bill", budget: "medium", bill: 3000 };
+const base: Answers = { roofType: "flat", shade: "none", access: "easy", priority: "bill", budget: "medium" };
 const get = (r: ReturnType<typeof scoreOptions>, id: string) => r.find((o) => o.id === id)!.score;
 
 describe("scoring", () => {
@@ -29,11 +29,43 @@ describe("scoring", () => {
 });
 
 describe("impact", () => {
-  it("solar kW = usable×0.6/6.5 and payback = cost/savings", () => {
+  it("solar is sized to 300 kWh/month, capped by roof capacity", () => {
     const s = solarImpact(65, 5, DEFAULT_ASSUMPTIONS);
-    expect(s.kw).toBeCloseTo(6, 6);
-    expect(s.kwhYear).toBeCloseTo(6 * 5 * 365 * 0.75, 4);
-    expect(s.payback).toBeCloseTo((6 * 55000) / (s.kwhYear * 7), 6);
+    expect(s.roofMaxKw).toBeCloseTo(6, 6);
+    expect(s.kw).toBeCloseTo(3600 / (5 * 365 * 0.75), 6);
+    expect(s.kwhYear).toBeCloseTo(3600, 4);
+    expect(s.payback).toBeCloseTo(s.cost / (3600 * 7), 6);
+    const small = solarImpact(13, 5, DEFAULT_ASSUMPTIONS);
+    expect(small.kw).toBeCloseTo(1.2, 6);
+  });
+  it("subsidy defaults to 0 and lowers payback cost", () => {
+    expect(DEFAULT_ASSUMPTIONS.subsidy).toBe(0);
+    const s = solarImpact(65, 5, { ...DEFAULT_ASSUMPTIONS, subsidy: 30000 });
+    expect(s.netCost).toBeCloseTo(s.cost - 30000, 6);
+  });
+  it("25-year projection: 3% tariff rise, 0.5% degradation, 1% maintenance", () => {
+    const p = solarProjection(1000, 10000, DEFAULT_ASSUMPTIONS);
+    expect(p.rows).toHaveLength(25);
+    expect(p.rows[0]!.savings).toBeCloseTo(1000 * 7 - 100, 6);
+    expect(p.rows[1]!.kwh).toBeCloseTo(995, 6);
+    expect(p.rows[1]!.savings).toBeCloseTo(995 * 7.21 - 100, 6);
+    expect(p.rows[0]!.cumulativeNet).toBeCloseTo(-10000 + 6900, 6);
+    expect(p.breakEvenYear).toBe(2);
+  });
+  it("CO2 = kWh × 0.7, trees = CO2 / 21", () => {
+    const c = co2Avoided(3000, DEFAULT_ASSUMPTIONS);
+    expect(c.kg).toBeCloseTo(2100, 6);
+    expect(c.trees).toBeCloseTo(100, 6);
+  });
+  it("family of 4 uses 540 litres/day", () => {
+    expect(familyWaterDays(54000, DEFAULT_ASSUMPTIONS)).toBe(100);
+  });
+  it("heat risk thresholds 30 / 35 / 40 °C", () => {
+    expect(heatRisk(29.9, DEFAULT_ASSUMPTIONS)).toBe("Low");
+    expect(heatRisk(30, DEFAULT_ASSUMPTIONS)).toBe("Moderate");
+    expect(heatRisk(35, DEFAULT_ASSUMPTIONS)).toBe("High");
+    expect(heatRisk(40, DEFAULT_ASSUMPTIONS)).toBe("High");
+    expect(heatRisk(40.1, DEFAULT_ASSUMPTIONS)).toBe("Extreme");
   });
   it("rainwater litres = usable×rainfall×0.8", () => {
     expect(rainwaterImpact(100, 800, DEFAULT_ASSUMPTIONS).litresYear).toBe(64000);

@@ -1,15 +1,61 @@
 import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Check, Droplet, Info, Leaf, Printer, Thermometer, TreeDeciduous, type LucideIcon } from "lucide-react";
 import { loadReport, type Report } from "@/lib/report";
 import { scoreOptions, type OptionId } from "@/lib/scoring";
-import { ASSUMPTION_LABELS, DEFAULT_ASSUMPTIONS, greenImpact, rainwaterImpact, reflectiveImpact, solarImpact, type Assumptions } from "@/lib/impact";
+import { DEFAULT_ASSUMPTIONS, co2Avoided, familyWaterDays, greenImpact, heatRisk, rainwaterImpact, reflectiveImpact, solarImpact, solarProjection, type Assumptions, type HeatRisk } from "@/lib/impact";
+import { formatInr, formatNum, panelCoverShare } from "@/lib/format";
+import { SolarOutlook } from "@/components/SolarOutlook";
 import { BeforeAfter } from "@/components/BeforeAfter";
+import { CountUp, Disclosure, RoughBadge, ScoreRing, SectionHeading, SectionNav, StatTile, useReveal, type NavItem } from "@/components/results/parts";
 import { logRoofReport } from "@/lib/roof-log";
+import { cn } from "@/lib/utils";
 
-const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
-const num = (n: number) => Math.round(n).toLocaleString("en-IN");
 const CHECKLIST = ["Structure can carry the extra load", "Waterproofing is in good shape", "Drainage is clear and adequate", "Fire safety and safe access are planned", "Permissions from society or local authority"];
+
+type Tile = { label: string; value: string };
+type Field = { label: string; unit: string; hint?: string };
+
+const FIELDS: Record<keyof Assumptions, Field> = {
+  panelCoverage: { label: "Share of usable area with panels", unit: "0–1" },
+  m2PerKw: { label: "Roof area per kW", unit: "m²" },
+  performance: { label: "System performance ratio", unit: "0–1" },
+  costPerKw: { label: "Solar cost", unit: "₹/kW" },
+  monthlyKwh: { label: "Typical home electricity use", unit: "kWh/mo" },
+  degradationPct: { label: "Panel degradation per year", unit: "%" },
+  reflectiveCostPerM2: { label: "Reflective coating cost", unit: "₹/m²" },
+  greenCoverage: { label: "Share of usable area planted", unit: "0–1" },
+  greenCostPerM2: { label: "Green roof cost", unit: "₹/m²" },
+  co2PerM2: { label: "CO₂ offset", unit: "kg/m²/yr" },
+  runoff: { label: "Rainwater collection efficiency", unit: "0–1" },
+  litresPerPersonDay: { label: "Water use per person", unit: "L/day" },
+  heatModerate: { label: "Heat risk: moderate from", unit: "°C" },
+  heatHigh: { label: "Heat risk: high from", unit: "°C" },
+  heatExtreme: { label: "Heat risk: extreme above", unit: "°C" },
+  gridFactor: { label: "Grid emission factor (approx.)", unit: "kg CO₂/kWh" },
+  co2PerTree: { label: "CO₂ absorbed per tree", unit: "kg/yr" },
+  tariff: { label: "Electricity tariff", unit: "₹/kWh" },
+  tariffIncreasePct: { label: "Tariff increase per year", unit: "%" },
+  maintenancePct: { label: "Maintenance per year", unit: "% of cost" },
+  subsidy: { label: "Subsidy", unit: "₹", hint: "Check the official PM Surya Ghar portal" },
+};
+
+const GROUPS: { title: string; keys: (keyof Assumptions)[] }[] = [
+  { title: "Solar", keys: ["panelCoverage", "m2PerKw", "performance", "costPerKw", "monthlyKwh", "degradationPct"] },
+  { title: "Reflective roof", keys: ["reflectiveCostPerM2"] },
+  { title: "Green roof", keys: ["greenCoverage", "greenCostPerM2", "co2PerM2"] },
+  { title: "Rainwater", keys: ["runoff", "litresPerPersonDay"] },
+  { title: "Climate and heat", keys: ["heatModerate", "heatHigh", "heatExtreme", "gridFactor", "co2PerTree"] },
+  { title: "Finance", keys: ["tariff", "tariffIncreasePct", "maintenancePct", "subsidy"] },
+];
+
+const HEAT_BADGE: Record<HeatRisk, string> = {
+  Low: "bg-heat-low/15 text-heat-low border-heat-low/30",
+  Moderate: "bg-heat-moderate/15 text-heat-moderate border-heat-moderate/30",
+  High: "bg-heat-high/15 text-heat-high border-heat-high/30",
+  Extreme: "bg-heat-extreme/15 text-heat-extreme border-heat-extreme/30",
+};
 
 export function ResultsPage() {
   const [report, setReport] = useState<Report | null | undefined>(undefined);
@@ -30,112 +76,261 @@ export function ResultsPage() {
     }
   }, [report, scores]);
 
+  useReveal(report);
+
+  const best = scores?.[0];
+  const showOutlook = best?.id === "solar" || best?.id === "hybrid";
+  const navItems = useMemo<NavItem[]>(() => [
+    { id: "summary", label: "Summary" },
+    { id: "options", label: "Options" },
+    ...(showOutlook ? [{ id: "outlook", label: "25-year outlook" }] : []),
+    { id: "environment", label: "Environment" },
+    { id: "assumptions", label: "Assumptions" },
+    { id: "checklist", label: "Checklist" },
+  ], [showOutlook]);
+
   if (report === undefined) return null;
   if (!report || !scores) {
     return (
       <main className="mx-auto max-w-xl px-5 py-16 text-center">
-        <p className="text-muted-foreground">No roof selected yet.</p>
+        <p className="text-foreground/70">No roof selected yet.</p>
         <Button asChild className="mt-4"><Link to="/map">Find my roof</Link></Button>
       </main>
     );
   }
+  if (!best) return null;
 
   const { usable, climate } = report;
-  const best = scores[0];
-  if (!best) return null;
   const rest = scores.slice(1);
   const solar = solarImpact(usable, climate.irradiance, a);
   const refl = reflectiveImpact(usable, a);
   const green = greenImpact(usable, a);
   const rain = rainwaterImpact(usable, climate.rainfall, a);
-  const yearlyBill = report.answers.bill * 12;
+  const co2 = co2Avoided(solar.kwhYear, a);
+  const waterDays = familyWaterDays(rain.litresYear, a);
+  const heat = heatRisk(climate.maxTemp, a);
+  const projection = showOutlook ? solarProjection(solar.kwhYear, solar.cost, a) : null;
+  const payback = isFinite(solar.payback) ? `${solar.payback.toFixed(1)} years` : "—";
 
-  const impact: Record<OptionId, string[]> = {
-    solar: [`${solar.kw.toFixed(1)} kW system`, `${num(solar.kwhYear)} kWh/yr`, `Saves ${inr(solar.savings)}/yr${yearlyBill > 0 ? ` (~${Math.min(100, Math.round((solar.savings / yearlyBill) * 100))}% of your bill)` : ""}`, `Costs ${inr(solar.cost)}`, `Payback ${isFinite(solar.payback) ? solar.payback.toFixed(1) : "—"} years`],
-    reflective: [`Indoor temperature drop ${refl.dropMin}–${refl.dropMax} °C`, `Costs ${inr(refl.cost)}`],
-    green: [`${num(green.area)} m² planted`, `Costs ${inr(green.cost)}`, `CO₂ offset ≈ ${num(green.co2)} kg/yr`],
-    rainwater: [`${num(rain.litresYear)} litres/yr collected`],
+  const tiles: Record<OptionId, Tile[]> = {
+    solar: [
+      { label: "System size", value: `${solar.kw.toFixed(1)} kW` },
+      { label: "Yearly generation", value: `${formatNum(solar.kwhYear)} kWh` },
+      { label: "Yearly savings", value: formatInr(solar.savings) },
+      { label: "Cost", value: formatInr(solar.cost) },
+      { label: "Payback", value: payback },
+    ],
+    reflective: [
+      { label: "Indoor temperature drop", value: `${refl.dropMin}–${refl.dropMax} °C` },
+      { label: "Cost", value: formatInr(refl.cost) },
+    ],
+    green: [
+      { label: "Area planted", value: `${formatNum(green.area)} m²` },
+      { label: "Cost", value: formatInr(green.cost) },
+      { label: "CO₂ offset", value: `≈ ${formatNum(green.co2)} kg/yr` },
+    ],
+    rainwater: [
+      { label: "Collected per year", value: `${formatNum(rain.litresYear)} L` },
+      { label: "Water for a family of 4", value: `${formatNum(waterDays)} days` },
+    ],
     hybrid: [],
   };
-  {
-    const top = scores.filter((s) => s.id !== "hybrid").slice(0, 2);
-    impact.hybrid = top.flatMap((t) => impact[t.id].slice(0, 2).map((x) => `${t.name}: ${x}`));
-  }
+  tiles.hybrid = scores.filter((s) => s.id !== "hybrid").slice(0, 2)
+    .flatMap((t) => tiles[t.id].slice(0, 2).map((x) => ({ label: `${t.name}: ${x.label}`, value: x.value })));
 
-  const positives = best.reasons.slice(0, 3);
+  const solarNote = (
+    <div className="mt-4 space-y-1 text-sm text-foreground/80">
+      <p>Your roof could host up to {solar.roofMaxKw.toFixed(1)} kW. A typical home needs about {solar.demandKw.toFixed(1)} kW.</p>
+      <p>Extra power may be exported to the grid under local net-metering rules. Please check these.</p>
+    </div>
+  );
 
   return (
-    <main className="roof-results mx-auto max-w-3xl px-5 py-8 print:py-0">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-primary">groofai</p>
-          <h1 className="text-2xl font-bold text-foreground">Your rooftop report</h1>
-          <p className="text-sm text-muted-foreground">Usable area {num(usable)} m² (estimated) · {report.lat.toFixed(4)}, {report.lon.toFixed(4)}</p>
-        </div>
-        <Button onClick={() => window.print()} variant="outline" className="print:hidden">Print report</Button>
-      </div>
-
-      <section className="result-card rounded-2xl border-2 border-primary bg-card p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Best fit</p>
-        <div className="mt-1 flex items-baseline justify-between">
-          <h2 className="text-3xl font-bold text-foreground">{best.name}</h2>
-          <span className="text-3xl font-bold text-primary">{best.score}<span className="text-base text-muted-foreground">/100</span></span>
-        </div>
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-foreground">{positives.map((r) => <li key={r}>{r}</li>)}</ul>
-        <ImpactList items={impact[best.id]} />
-        <div className="mt-5"><BeforeAfter option={best.id} /></div>
-      </section>
-
-      <section className="mt-6 space-y-3">
-        {rest.map((o, i) => (
-          <div key={o.id} className="result-card rounded-xl border border-border bg-card p-4">
-            <div className="flex items-baseline justify-between">
-              <h3 className="font-semibold text-foreground">{i + 2}. {o.name}</h3>
-              <span className="font-semibold text-primary">{o.score}/100</span>
-            </div>
-            <div className="mt-2 h-1.5 rounded-full bg-muted"><div className="score-bar h-full rounded-full bg-primary" style={{ width: `${o.score}%` }} /></div>
-            <p className="mt-2 text-xs text-muted-foreground">{o.reasons.join(" ")}</p>
-            <ImpactList items={impact[o.id]} />
+    <main className="roof-results overflow-x-clip bg-background">
+      <div className="mx-auto max-w-[960px] px-4 pb-16 pt-8 sm:px-6 print:py-0">
+        <header className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-primary">groofai</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Your rooftop report</h1>
+            <p className="mt-2 text-sm text-foreground/75 sm:text-base">
+              Usable area {formatNum(usable)} m² (estimated) · {report.lat.toFixed(4)}, {report.lon.toFixed(4)}
+            </p>
           </div>
-        ))}
-      </section>
+          <Button onClick={() => window.print()} variant="outline" className="shrink-0 print:hidden">
+            <Printer /> <span className="hidden sm:inline">Print report</span><span className="sm:hidden">Print</span>
+          </Button>
+        </header>
 
-      <section className="mt-8 rounded-xl border border-border bg-card p-4">
-        <h2 className="font-semibold text-foreground">Assumptions <span className="text-xs font-normal text-muted-foreground">(rough estimates — edit to update)</span></h2>
-        <p className="mt-1 text-xs text-muted-foreground">Climate: {climate.irradiance.toFixed(2)} kWh/m²/day, {climate.maxTemp.toFixed(1)} °C max, {num(climate.rainfall)} mm/yr{climate.fallback ? " (typical values)" : " (NASA POWER)"}.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {(Object.keys(a) as (keyof Assumptions)[]).map((k) => (
-            <label key={k} className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-muted-foreground">{ASSUMPTION_LABELS[k]}</span>
-              <input type="number" step="any" value={a[k]} onChange={(e) => setA({ ...a, [k]: Number(e.target.value) || 0 })}
-                className="w-24 rounded-md border border-input bg-background px-2 py-1 text-right" />
-            </label>
-          ))}
+        <section id="summary" aria-label="Summary" className="rp-section mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          <SummaryCard label="Best fit" value={best.name} sub={<><CountUp value={best.score} format={(n) => String(Math.round(n))} />/100 score</>} highlight />
+          <SummaryCard label="Saves per year" value={<CountUp value={solar.savings} format={formatInr} />} sub="with solar" />
+          <SummaryCard label="Payback" value={isFinite(solar.payback) ? <><CountUp value={solar.payback} format={(n) => n.toFixed(1)} /> yrs</> : "—"} sub="after subsidy" />
+          <SummaryCard label="CO₂ avoided / yr" value={<><CountUp value={co2.kg} format={formatNum} /> kg</>} sub={`≈ ${formatNum(co2.trees)} trees`} />
+        </section>
+
+        <div className="mt-6"><SectionNav items={navItems} /></div>
+
+        <div className="mt-6 space-y-10">
+          <section id="options" className="rp-section">
+            <SectionHeading badge>Your options</SectionHeading>
+            <article className="reveal rp-card rounded-2xl border-2 border-primary bg-card p-5 shadow-md sm:p-6">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <ScoreRing score={best.score} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">Best fit</p>
+                  <h3 className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">{best.name}</h3>
+                  <ul className="mt-3 space-y-2">
+                    {best.reasons.slice(0, 3).map((r) => (
+                      <li key={r} className="flex items-start gap-2 text-sm text-foreground sm:text-base">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary"><Check className="size-3.5" /></span>
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <TileGrid items={tiles[best.id]} className="mt-5" />
+              {(best.id === "solar" || best.id === "hybrid") && solarNote}
+              <div className="mt-5">
+                <BeforeAfter option={best.id} coverage={best.id === "solar" || best.id === "hybrid" ? panelCoverShare(solar.kw, solar.roofMaxKw) : undefined} />
+              </div>
+            </article>
+
+            {rest.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h3 className="text-base font-semibold text-foreground/80">Other options</h3>
+                {rest.map((o, i) => {
+                  const tiedWith = scores.slice(0, i + 1).find((s) => s.score === o.score);
+                  return (
+                    <Disclosure key={o.id} className="reveal" header={
+                      <>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">{i + 2}</span>
+                          <span className="font-semibold text-foreground">{o.name}</span>
+                          {tiedWith && <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">Tied with {tiedWith.name}</span>}
+                          <span className="ml-auto text-sm font-semibold text-primary">{o.score}/100</span>
+                        </div>
+                        <div className="mt-2 h-2 rounded-full bg-muted"><div className="score-bar h-full rounded-full bg-primary" style={{ width: `${o.score}%` }} /></div>
+                        <p className="mt-2 text-sm text-foreground/75">{o.reasons.join(" ")}</p>
+                      </>
+                    }>
+                      <TileGrid items={tiles[o.id]} />
+                      {o.id === "solar" && solarNote}
+                    </Disclosure>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {projection && <SolarOutlook projection={projection} id="outlook" />}
+
+          <section id="environment" className="rp-section">
+            <SectionHeading badge>Environment and water</SectionHeading>
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+              <EnvCard icon={Leaf} label="CO₂ avoided by solar" value={`${formatNum(co2.kg)} kg/yr`} hint={`≈ ${formatNum(co2.trees)} trees' yearly absorption`} />
+              <EnvCard icon={Droplet} label="Rainwater collected" value={`${formatNum(rain.litresYear)} litres/yr`} hint={`= ${formatNum(waterDays)} days of water for a family of 4`} />
+              <EnvCard icon={Thermometer} label="Heat risk"
+                value={<span className={cn("inline-flex rounded-full border px-3 py-0.5 text-base font-semibold", HEAT_BADGE[heat])}>{heat}</span>}
+                hint={`Avg max temperature ${climate.maxTemp.toFixed(1)} °C`} />
+              <EnvCard icon={TreeDeciduous} label="Green roof CO₂ offset" value={`${formatNum(green.co2)} kg/yr`} hint={`${formatNum(green.area)} m² planted`} />
+            </div>
+          </section>
+
+          <section id="assumptions" className="rp-section">
+            <Disclosure className="reveal" header={
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-lg font-semibold text-foreground">Advanced: edit assumptions</span>
+                <RoughBadge />
+                <span className="w-full text-sm text-foreground/70">Change any value and every estimate above updates instantly.</span>
+              </div>
+            }>
+              <p className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground/80">
+                Climate: {climate.irradiance.toFixed(2)} kWh/m²/day, {climate.maxTemp.toFixed(1)} °C max, {formatNum(climate.rainfall)} mm/yr{climate.fallback ? " (typical values)" : " (NASA POWER)"}.
+              </p>
+              <div className="mt-4 grid gap-x-8 gap-y-6 md:grid-cols-2">
+                {GROUPS.map((g) => (
+                  <fieldset key={g.title} className="min-w-0">
+                    <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">{g.title}</legend>
+                    <div className="space-y-2">
+                      {g.keys.map((k) => {
+                        const f = FIELDS[k];
+                        return (
+                          <label key={k} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="min-w-0 text-foreground/85">
+                              {f.label}
+                              {f.hint && <span className="block text-xs text-foreground/65">{f.hint}</span>}
+                            </span>
+                            <span className="flex shrink-0 items-center overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+                              <input type="number" step="any" inputMode="decimal" value={a[k]} onChange={(e) => setA({ ...a, [k]: Number(e.target.value) || 0 })}
+                                className="w-20 bg-transparent px-2 py-1.5 text-right text-sm text-foreground outline-none" />
+                              <span className="border-l border-input bg-muted px-2 py-1.5 text-xs text-foreground/70">{f.unit}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ))}
+              </div>
+            </Disclosure>
+          </section>
+
+          <section id="checklist" className="rp-section">
+            <div className="reveal rp-card rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <SectionHeading>Before you install</SectionHeading>
+              <ul className="space-y-1">
+                {CHECKLIST.map((c) => (
+                  <li key={c}>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 text-sm text-foreground hover:bg-accent/60 sm:text-base">
+                      <input type="checkbox" className="size-4 accent-primary" />{c}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rp-card mt-4 flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground sm:text-base">
+              <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+              <p><strong>Planning estimate, not an engineering approval.</strong> Have a qualified professional inspect your roof.</p>
+            </div>
+          </section>
         </div>
-      </section>
 
-      <section className="mt-6 rounded-xl border border-border bg-card p-4">
-        <h2 className="font-semibold text-foreground">Before you install</h2>
-        <ul className="mt-2 space-y-1.5 text-sm">
-          {CHECKLIST.map((c) => (
-            <li key={c}><label className="flex items-center gap-2"><input type="checkbox" className="accent-primary" />{c}</label></li>
-          ))}
-        </ul>
-      </section>
-
-      <p className="mt-6 rounded-lg bg-muted p-3 text-sm text-foreground">Planning estimate, not an engineering approval. Have a qualified professional inspect your roof.</p>
-      <Button asChild variant="link" className="mt-6 px-0 print:hidden"><Link to="/map">← Back to map</Link></Button>
-      <p className="mt-2 text-xs text-muted-foreground print:hidden">Anonymous roof statistics are saved to improve this tool.</p>
+        <Button asChild variant="link" className="mt-8 px-0 print:hidden"><Link to="/map">← Back to map</Link></Button>
+        <p className="mt-2 text-sm text-foreground/65 print:hidden">Anonymous roof statistics are saved to improve this tool.</p>
+      </div>
     </main>
   );
 }
 
-function ImpactList({ items }: { items: string[] }) {
+function SummaryCard({ label, value, sub, highlight = false }: { label: string; value: React.ReactNode; sub?: React.ReactNode; highlight?: boolean }) {
+  return (
+    <div className={cn("rp-card rounded-2xl border bg-card p-4 shadow-sm sm:p-5", highlight ? "border-primary/50 bg-primary/5" : "border-border")}>
+      <p className="text-xs font-medium uppercase tracking-wide text-foreground/70">{label}</p>
+      <p className="mt-1.5 break-words text-xl font-bold leading-tight text-foreground sm:text-2xl">{value}</p>
+      {sub && <p className="mt-1 text-sm text-foreground/70">{sub}</p>}
+    </div>
+  );
+}
+
+function TileGrid({ items, className }: { items: Tile[]; className?: string }) {
   if (!items.length) return null;
   return (
-    <div className="mt-3">
-      <p className="text-xs font-medium text-muted-foreground">Impact (rough estimates)</p>
-      <ul className="mt-1 flex flex-wrap gap-1.5">{items.map((x) => <li key={x} className="rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">{x}</li>)}</ul>
+    <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3", className)}>
+      {items.map((t) => <StatTile key={t.label} label={t.label} value={t.value} />)}
+    </div>
+  );
+}
+
+function EnvCard({ icon: Icon, label, value, hint }: { icon: LucideIcon; label: string; value: React.ReactNode; hint: string }) {
+  return (
+    <div className="reveal rp-card flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="size-5" aria-hidden /></span>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground/75">{label}</p>
+        <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+        <p className="mt-1 text-sm text-foreground/70">{hint}</p>
+      </div>
     </div>
   );
 }

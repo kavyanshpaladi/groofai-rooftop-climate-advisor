@@ -12,7 +12,11 @@ export function saveReport(r: Report) {
 export function loadReport(): Report | null {
   try {
     const raw = sessionStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Report) : null;
+    if (!raw) return null;
+    const r = JSON.parse(raw) as Report & { answers: Answers & { bill?: unknown } };
+    // Older saved reports may still carry a bill value; drop it.
+    const { bill: _bill, ...answers } = r.answers ?? ({} as Answers & { bill?: unknown });
+    return { ...r, answers: answers as Answers };
   } catch {
     return null;
   }
