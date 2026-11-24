@@ -12,7 +12,7 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
   const s = roofStats(roof);
   const fmt = (n: number) => Math.round(n).toLocaleString();
   const [climate, setClimate] = useState<Climate | null>(null);
-  const [draft, setDraft] = useState<Draft>({ bill: 3000 });
+  const [draft, setDraft] = useState<Draft>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export function RoofPanel({ roof, onClose }: { roof: Feature<Polygon>; onClose: 
   const ready = climate && isComplete(draft);
   const go = () => {
     if (!climate || !isComplete(draft)) return;
-    saveReport({ area: s.area, usable: s.usable, lat: s.lat, lon: s.lon, climate, answers: draft });
+    saveReport({ area: s.area, usable: s.usable, lat: s.lat, lon: s.lon, climate, answers: { roofType: draft.roofType, shade: draft.shade, access: draft.access, priority: draft.priority, budget: draft.budget } });
     navigate({ to: "/results" });
   };
 

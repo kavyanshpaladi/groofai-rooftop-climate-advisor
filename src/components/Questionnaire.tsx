@@ -12,7 +12,7 @@ const QUESTIONS = [
   { key: "budget", label: "Budget", options: [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }] },
 ] as Q<keyof Answers>[];
 
-export type Draft = Partial<Answers> & { bill: number };
+export type Draft = Partial<Answers>;
 
 export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v: Draft) => void }) {
   return (
@@ -35,11 +35,6 @@ export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v:
           </div>
         </div>
       ))}
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium text-muted-foreground">Monthly electricity bill (₹, optional)</span>
-        <input type="number" min={0} value={value.bill} onChange={(e) => onChange({ ...value, bill: Number(e.target.value) || 0 })}
-          className="w-full rounded-md border border-input bg-card px-2 py-1 text-sm" />
-      </label>
     </div>
   );
 }
