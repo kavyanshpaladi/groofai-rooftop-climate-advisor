@@ -29,6 +29,13 @@
       "when": 1795352319155,
       "tag": "0003_apply_saved_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795521181985,
+      "tag": "0004_restore_roof_app_setup",
+      "breakpoints": true
     }
   ]
 }
