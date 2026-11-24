@@ -1,10 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { backendConnected } from "@/lib/backend";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
   beforeLoad: async () => {
+    // No database: the sign-in page explains it instead of this page failing to load.
+    if (!backendConnected()) throw redirect({ to: "/admin/login" });
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/admin/login" });
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" });

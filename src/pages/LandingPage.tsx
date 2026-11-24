@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { RoofCounter } from "@/components/RoofCounter";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import greenerImg from "@/assets/greener_rooftop.png.asset.json";
 import { Sun, Leaf, Droplets, Snowflake, ArrowRight, MapPin, ListChecks, Sparkles } from "lucide-react";
 
@@ -43,18 +45,20 @@ const steps = [
 ];
 
 export function LandingPage() {
+  const { t } = useI18n();
   return (
     <main className="min-h-dvh bg-background">
       <section className="relative overflow-hidden">
-        <img src={HERO} alt="Solar panels on a sunny rooftop" className="hero-zoom absolute inset-0 h-full w-full object-cover" />
+        <img src={HERO} alt={t("heroAlt")} className="hero-zoom absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-foreground/80 via-foreground/60 to-background" />
+        <LanguageSwitcher className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6" />
         <div className="relative mx-auto max-w-5xl px-5 pb-24 pt-20 sm:pt-32">
           <p className="mb-4 inline-flex rounded-full border border-primary-foreground/30 bg-primary/30 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground backdrop-blur">groofai</p>
-          <h1 className="hero-3d max-w-3xl text-4xl font-black leading-[1.05] text-primary-foreground sm:text-7xl">Find the best climate upgrade for your rooftop</h1>
-          <p className="mt-6 max-w-xl text-lg text-primary-foreground/85">Your roof is the most underused space you own. groofai reads satellite imagery and local sun, heat and rain data to tell you whether solar, a garden, a cool coating or rain harvesting fits you best — free, in two minutes.</p>
+          <h1 className="hero-3d max-w-3xl text-4xl font-black leading-[1.05] text-primary-foreground sm:text-7xl">{t("heroTitle")}</h1>
+          <p className="mt-6 max-w-xl text-lg text-primary-foreground/85">{t("heroText")}</p>
           <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-14 px-8 text-base shadow-xl"><Link to="/map">Find my roof <ArrowRight /></Link></Button>
-            <span className="text-sm text-primary-foreground/80"><Droplets className="mr-1 inline size-4" />No sign-up. No cost.</span>
+            <Button asChild size="lg" className="h-14 px-8 text-base shadow-xl"><Link to="/map">{t("heroCta")} <ArrowRight /></Link></Button>
+            <span className="text-sm text-primary-foreground/80"><Droplets className="mr-1 inline size-4" />{t("heroNote")}</span>
           </div>
         </div>
       </section>

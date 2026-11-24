@@ -1,3 +1,5 @@
+import type { Budget } from "./scoring";
+
 export type Assumptions = {
   panelCoverage: number;
   m2PerKw: number;
@@ -5,7 +7,10 @@ export type Assumptions = {
   tariff: number;
   costPerKw: number;
   monthlyKwh: number;
-  subsidy: number;
+  subsidyPerKw: number;
+  subsidyThirdKw: number;
+  loanInterestPct: number;
+  loanYears: number;
   tariffIncreasePct: number;
   degradationPct: number;
   maintenancePct: number;
@@ -29,7 +34,10 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   tariff: 7,
   costPerKw: 55000,
   monthlyKwh: 300,
-  subsidy: 0,
+  subsidyPerKw: 30000,
+  subsidyThirdKw: 18000,
+  loanInterestPct: 7,
+  loanYears: 10,
   tariffIncreasePct: 3,
   degradationPct: 0.5,
   maintenancePct: 1,
@@ -53,7 +61,10 @@ export const ASSUMPTION_LABELS: Record<keyof Assumptions, string> = {
   tariff: "Electricity tariff (₹/kWh)",
   costPerKw: "Solar cost (₹/kW)",
   monthlyKwh: "Typical home electricity use (kWh/month)",
-  subsidy: "Subsidy (₹) — check the official PM Surya Ghar portal",
+  subsidyPerKw: "Subsidy per kW for the first 2 kW (₹) — check the official PM Surya Ghar portal",
+  subsidyThirdKw: "Subsidy for the third kW (₹)",
+  loanInterestPct: "Loan interest (%)",
+  loanYears: "Loan years",
   tariffIncreasePct: "Tariff increase per year (%)",
   degradationPct: "Panel degradation per year (%)",
   maintenancePct: "Maintenance per year (% of system cost)",
@@ -70,26 +81,88 @@ export const ASSUMPTION_LABELS: Record<keyof Assumptions, string> = {
   heatExtreme: "Heat risk: extreme above (°C)",
 };
 
-/** Solar sized to a typical home's yearly use, capped by what the roof can hold. */
+/** Solar sized to a typical home's yearly use, capped by what the roof can hold (used when there is no roof outline). */
 export function solarImpact(usable: number, irradiance: number, a: Assumptions) {
   const roofMaxKw = Math.max(0, (usable * a.panelCoverage) / a.m2PerKw);
+  const demandKw = solarForKw(0, irradiance, a).demandKw;
+  return { ...solarForKw(Math.min(roofMaxKw, demandKw), irradiance, a), roofMaxKw };
+}
+
+/** Generation, savings, cost and payback for a given system size in kW. */
+export function solarForKw(kw: number, irradiance: number, a: Assumptions) {
   const yieldPerKw = irradiance * 365 * a.performance;
   const annualDemandKwh = a.monthlyKwh * 12;
   const demandKw = yieldPerKw > 0 ? annualDemandKwh / yieldPerKw : 0;
-  const kw = Math.min(roofMaxKw, demandKw);
   const kwhYear = kw * yieldPerKw;
   const savings = kwhYear * a.tariff;
   const cost = kw * a.costPerKw;
-  const netCost = Math.max(0, cost - a.subsidy);
-  return { kw, roofMaxKw, demandKw, kwhYear, savings, cost, netCost, payback: savings > 0 ? netCost / savings : Infinity };
+  const subsidy = Math.min(cost, subsidyFor(kw, a));
+  const netCost = cost - subsidy;
+  return { kw, roofMaxKw: kw, demandKw, kwhYear, savings, cost, subsidy, netCost, payback: savings > 0 ? netCost / savings : Infinity };
+}
+
+/** System size from which the government subsidy stops growing. */
+export const FULL_SUBSIDY_KW = 3;
+
+/** Government subsidy for a system size: a per-kW amount for the first 2 kW, a smaller one for the third kW, nothing beyond 3 kW. */
+export function subsidyFor(kw: number, a: Assumptions) {
+  const k = Math.max(0, kw);
+  return Math.min(k, 2) * a.subsidyPerKw + Math.min(Math.max(k - 2, 0), FULL_SUBSIDY_KW - 2) * a.subsidyThirdKw;
+}
+
+/** Equal monthly instalment for a loan at a yearly interest rate (%), repaid over the given years. */
+export function loanEmi(principal: number, ratePct: number, years: number) {
+  const n = Math.round(years * 12);
+  if (!(principal > 0) || n <= 0) return 0;
+  const r = ratePct / 1200;
+  if (!(r > 0)) return principal / n;
+  const g = Math.pow(1 + r, n);
+  return (principal * r * g) / (g - 1);
+}
+
+export const PANEL_KW = 0.4;
+
+/** Most a budget can spend on solar (₹); "Not sure" sets no limit. */
+export const BUDGET_LIMIT: Record<Budget, number> = {
+  low: 50000,
+  medium: 150000,
+  high: 500000,
+  unsure: Infinity,
+};
+
+export type SolarLimit = "roof" | "need" | "budget";
+
+/**
+ * Recommended system in whole 400 W panels, never more than the roof fits and at least 1 when it fits any.
+ * Low/Medium/High: what the budget buys (not capped at a typical home's need).
+ * "Not sure" or no answer: a typical home's need.
+ */
+export function recommendSolar(roofMaxKw: number, irradiance: number, budget: Budget | undefined, a: Assumptions) {
+  const eps = 1e-9;
+  const whole = (kw: number) => Math.max(0, Math.floor(kw / PANEL_KW + eps));
+  const roofPanels = whole(roofMaxKw);
+  const needKw = solarForKw(0, irradiance, a).demandKw;
+  const needPanels = whole(needKw);
+  const limit = budget ? BUDGET_LIMIT[budget] : Infinity;
+  const budgetKw = a.costPerKw > 0 ? limit / a.costPerKw : Infinity;
+  const byBudget = isFinite(limit) && isFinite(budgetKw);
+  const want = Math.max(1, byBudget ? whole(budgetKw) : needPanels);
+  const panels = Math.min(roofPanels, want);
+  const limitedBy: SolarLimit = want > roofPanels ? "roof" : byBudget ? "budget" : "need";
+  return { panels, kw: panels * PANEL_KW, roofPanels, roofMaxKw, needKw, needPanels, budgetKw, limitedBy };
+}
+
+/** Panel count after one press of the cost stepper: one panel up or down, never below 1 or above what the roof fits. */
+export function stepPanels(panels: number, dir: 1 | -1, roofPanels: number) {
+  return Math.max(1, Math.min(roofPanels, panels + dir));
 }
 
 export type ProjectionYear = { year: number; kwh: number; savings: number; cumulativeNet: number };
 
 /** 25-year cash flow: degrading output, rising tariff, yearly maintenance, upfront cost minus subsidy. */
-export function solarProjection(kwhYear1: number, cost: number, a: Assumptions, years = 25) {
+export function solarProjection(kwhYear1: number, cost: number, a: Assumptions, subsidy = 0, years = 25) {
   const maintenance = cost * (a.maintenancePct / 100);
-  let cumulative = -(cost - a.subsidy);
+  let cumulative = -(cost - subsidy);
   let totalKwh = 0;
   let breakEvenYear: number | null = cumulative >= 0 ? 0 : null;
   const rows: ProjectionYear[] = [];
@@ -102,7 +175,7 @@ export function solarProjection(kwhYear1: number, cost: number, a: Assumptions, 
     if (breakEvenYear === null && cumulative >= 0) breakEvenYear = y;
     rows.push({ year: y, kwh, savings, cumulativeNet: cumulative });
   }
-  return { rows, startNet: -(cost - a.subsidy), breakEvenYear, netSaving: cumulative, totalMwh: totalKwh / 1000 };
+  return { rows, startNet: -(cost - subsidy), breakEvenYear, netSaving: cumulative, totalMwh: totalKwh / 1000 };
 }
 
 export function co2Avoided(kwhYear: number, a: Assumptions) {

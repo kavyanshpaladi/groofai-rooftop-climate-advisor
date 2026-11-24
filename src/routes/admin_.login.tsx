@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { backendConnected } from "@/lib/backend";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin_/login")({
@@ -26,14 +27,16 @@ function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const connected = backendConnected();
   const [msg, setMsg] = useState<{ kind: "error" | "info"; text: string } | null>(null);
 
   // Coming back from Google (or already signed in): go straight to the dashboard.
   useEffect(() => {
+    if (!connected) return;
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/admin", replace: true });
     });
-  }, [navigate]);
+  }, [navigate, connected]);
 
   async function signInWithGoogle() {
     setBusy(true);
@@ -74,7 +77,7 @@ function AdminLogin() {
       <button
         type="button"
         onClick={signInWithGoogle}
-        disabled={busy}
+        disabled={busy || !connected}
         className="mt-6 inline-flex h-10 w-full items-center justify-center gap-2.5 rounded-md border px-3 text-sm font-medium leading-5 transition-opacity hover:opacity-90 disabled:opacity-60"
         style={{ backgroundColor: "#FFFFFF", borderColor: "#747775", color: "#1F1F1F" }}
       >
@@ -87,8 +90,9 @@ function AdminLogin() {
       <form onSubmit={submit} className="space-y-3">
         <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
         <input type="password" required minLength={6} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+        {!connected && <p className="text-sm text-destructive">Admin sign-in is unavailable until a database is connected.</p>}
         {msg && <p className={msg.kind === "error" ? "text-sm text-destructive" : "text-sm text-primary"}>{msg.text}</p>}
-        <Button type="submit" disabled={busy} className="w-full">{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</Button>
+        <Button type="submit" disabled={busy || !connected} className="w-full">{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</Button>
       </form>
       <Button variant="link" className="mt-2" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
         {mode === "signin" ? "No account yet? Create one" : "Already have an account? Sign in"}

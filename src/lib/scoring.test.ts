@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { scoreOptions, type Answers } from "./scoring";
-import { solarImpact, solarProjection, co2Avoided, familyWaterDays, heatRisk, DEFAULT_ASSUMPTIONS, rainwaterImpact } from "./impact";
+import { PANEL_KW, loanEmi, subsidyFor, solarForKw, stepPanels, recommendSolar, solarImpact, solarProjection, co2Avoided, familyWaterDays, heatRisk, DEFAULT_ASSUMPTIONS, rainwaterImpact } from "./impact";
 
-const base: Answers = { roofType: "flat", shade: "none", access: "easy", priority: "bill", budget: "medium" };
+const base: Answers = { roofType: "flat", shade: "none", access: "easy", priority: "bill", budget: "unsure" };
 const get = (r: ReturnType<typeof scoreOptions>, id: string) => r.find((o) => o.id === id)!.score;
 
 describe("scoring", () => {
@@ -26,6 +26,47 @@ describe("scoring", () => {
     const r = scoreOptions({ ...base, priority: "cooler", budget: "low" }, { usable: 50, irradiance: 5.5, maxTemp: 38, rainfall: 800 });
     expect(get(r, "reflective")).toBe(100);
   });
+  it("low budget lowers solar by 15", () => {
+    const i = { usable: 50, irradiance: 5.5, maxTemp: 30, rainfall: 800 };
+    expect(get(scoreOptions({ ...base, budget: "low" }, i), "solar")).toBe(75);
+  });
+});
+
+describe("recommended solar size", () => {
+  // irradiance 5 → need = 3600 / (5 × 365 × 0.75) ≈ 2.63 kW; cost ₹55,000/kW
+  it("Not sure or no answer = a typical home's need, in whole 400 W panels", () => {
+    for (const b of ["unsure", undefined] as const) {
+      const r = recommendSolar(20, 5, b, DEFAULT_ASSUMPTIONS);
+      expect(r.panels).toBe(6);
+      expect(r.kw).toBeCloseTo(2.4, 6);
+      expect(r.limitedBy).toBe("need");
+    }
+  });
+  it("low budget (₹50k) buys 2 panels", () => {
+    const r = recommendSolar(20, 5, "low", DEFAULT_ASSUMPTIONS);
+    expect(r.panels).toBe(2);
+    expect(r.limitedBy).toBe("budget");
+  });
+  it("medium budget (₹1.5L) buys 6 panels", () => {
+    const r = recommendSolar(20, 5, "medium", DEFAULT_ASSUMPTIONS);
+    expect(r.budgetKw).toBeCloseTo(150000 / 55000, 6);
+    expect(r.panels).toBe(6);
+  });
+  it("high budget (₹5L) buys 22 panels and is not capped at the typical home need", () => {
+    const r = recommendSolar(20, 5, "high", DEFAULT_ASSUMPTIONS);
+    expect(r.budgetKw).toBeCloseTo(500000 / 55000, 6);
+    expect(r.panels).toBe(22);
+    expect(r.kw).toBeGreaterThan(r.needKw);
+  });
+  it("is capped at the most panels the roof fits", () => {
+    const r = recommendSolar(1.6, 5, "high", DEFAULT_ASSUMPTIONS);
+    expect(r.panels).toBe(4);
+    expect(r.limitedBy).toBe("roof");
+  });
+  it("is at least 1 panel when the roof fits one", () => {
+    expect(recommendSolar(20, 5, "low", { ...DEFAULT_ASSUMPTIONS, costPerKw: 200000 }).panels).toBe(1);
+    expect(recommendSolar(0.3, 5, "unsure", DEFAULT_ASSUMPTIONS).panels).toBe(0);
+  });
 });
 
 describe("impact", () => {
@@ -34,14 +75,27 @@ describe("impact", () => {
     expect(s.roofMaxKw).toBeCloseTo(6, 6);
     expect(s.kw).toBeCloseTo(3600 / (5 * 365 * 0.75), 6);
     expect(s.kwhYear).toBeCloseTo(3600, 4);
-    expect(s.payback).toBeCloseTo(s.cost / (3600 * 7), 6);
+    expect(s.payback).toBeCloseTo(s.netCost / (3600 * 7), 6);
     const small = solarImpact(13, 5, DEFAULT_ASSUMPTIONS);
     expect(small.kw).toBeCloseTo(1.2, 6);
   });
-  it("subsidy defaults to 0 and lowers payback cost", () => {
-    expect(DEFAULT_ASSUMPTIONS.subsidy).toBe(0);
-    const s = solarImpact(65, 5, { ...DEFAULT_ASSUMPTIONS, subsidy: 30000 });
-    expect(s.netCost).toBeCloseTo(s.cost - 30000, 6);
+  it("subsidy: Rs 30,000 per kW for the first 2 kW, Rs 18,000 for the third, Rs 78,000 from 3 kW", () => {
+    expect(subsidyFor(1, DEFAULT_ASSUMPTIONS)).toBeCloseTo(30000, 6);
+    expect(subsidyFor(2, DEFAULT_ASSUMPTIONS)).toBeCloseTo(60000, 6);
+    expect(subsidyFor(3, DEFAULT_ASSUMPTIONS)).toBeCloseTo(78000, 6);
+    expect(subsidyFor(8, DEFAULT_ASSUMPTIONS)).toBeCloseTo(78000, 6);
+  });
+  it("at 3 kW you pay the cost minus the Rs 78,000 subsidy, and payback uses what you pay", () => {
+    const s = solarForKw(3, 5, DEFAULT_ASSUMPTIONS);
+    expect(s.cost).toBeCloseTo(165000, 6);
+    expect(s.netCost).toBeCloseTo(87000, 6);
+    expect(s.payback).toBeCloseTo(87000 / s.savings, 6);
+  });
+  it("loan EMI: cost before subsidy at 7% over 10 years", () => {
+    expect(DEFAULT_ASSUMPTIONS.loanInterestPct).toBe(7);
+    expect(DEFAULT_ASSUMPTIONS.loanYears).toBe(10);
+    expect(loanEmi(165000, 7, 10)).toBeCloseTo(1915.79, 1);
+    expect(loanEmi(120000, 0, 10)).toBeCloseTo(1000, 6);
   });
   it("25-year projection: 3% tariff rise, 0.5% degradation, 1% maintenance", () => {
     const p = solarProjection(1000, 10000, DEFAULT_ASSUMPTIONS);
@@ -69,5 +123,19 @@ describe("impact", () => {
   });
   it("rainwater litres = usable×rainfall×0.8", () => {
     expect(rainwaterImpact(100, 800, DEFAULT_ASSUMPTIONS).litresYear).toBe(64000);
+  });
+});
+
+describe("cost stepper", () => {
+  it("one step changes the cost by one panel's worth", () => {
+    const cost = (n: number) => solarForKw(n * PANEL_KW, 5, DEFAULT_ASSUMPTIONS).cost;
+    expect(cost(stepPanels(6, 1, 20)) - cost(6)).toBeCloseTo(cost(1), 6);
+    expect(cost(6) - cost(stepPanels(6, -1, 20))).toBeCloseTo(cost(1), 6);
+  });
+  it("lowest is one panel", () => {
+    expect(stepPanels(1, -1, 20)).toBe(1);
+  });
+  it("highest is the most panels the roof fits", () => {
+    expect(stepPanels(20, 1, 20)).toBe(20);
   });
 });

@@ -3,18 +3,25 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check, Droplet, Info, Leaf, Printer, Thermometer, TreeDeciduous, type LucideIcon } from "lucide-react";
 import { loadReport, type Report } from "@/lib/report";
-import { scoreOptions, type OptionId } from "@/lib/scoring";
-import { DEFAULT_ASSUMPTIONS, co2Avoided, familyWaterDays, greenImpact, heatRisk, rainwaterImpact, reflectiveImpact, solarImpact, solarProjection, type Assumptions, type HeatRisk } from "@/lib/impact";
-import { formatInr, formatNum, panelCoverShare } from "@/lib/format";
+import { BUDGET_LABELS, scoreOptions, type OptionId } from "@/lib/scoring";
+import { DEFAULT_ASSUMPTIONS, PANEL_KW, co2Avoided, familyWaterDays, greenImpact, heatRisk, rainwaterImpact, BUDGET_LIMIT, recommendSolar, reflectiveImpact, stepPanels, solarForKw, solarImpact, solarProjection, type Assumptions, type HeatRisk } from "@/lib/impact";
+import { formatInr, formatNum } from "@/lib/format";
 import { SolarOutlook } from "@/components/SolarOutlook";
 import { BeforeAfter } from "@/components/BeforeAfter";
-import { CountUp, Disclosure, RoughBadge, ScoreRing, SectionHeading, SectionNav, StatTile, useReveal, type NavItem } from "@/components/results/parts";
+import { SubsidyCard } from "@/components/SubsidyCard";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
+import type { TKey } from "@/lib/translations";
+import { CountUp, Disclosure, RoughBadge, ScoreRing, SectionHeading, SectionNav, StatTile, StepperTile, Tween, useReveal, type NavItem, type TileStep } from "@/components/results/parts";
 import { logRoofReport } from "@/lib/roof-log";
+import { EMPTY_LAYOUT, coveragePct, panelsForCoverage, layoutPanelBlock, layoutPanels, ringArea, validRing, type LL, type PanelLayout } from "@/lib/panels";
+import { MIN_ROOF_AREA } from "@/lib/roof";
 import { cn } from "@/lib/utils";
 
-const CHECKLIST = ["Structure can carry the extra load", "Waterproofing is in good shape", "Drainage is clear and adequate", "Fire safety and safe access are planned", "Permissions from society or local authority"];
+const CHECKLIST: TKey[] = ["chk1", "chk2", "chk3", "chk4", "chk5"];
+const OPTION_NAME: Record<OptionId, TKey> = { solar: "optSolar", green: "optGreen", reflective: "optReflective", rainwater: "optRainwater", hybrid: "optHybrid" };
 
-type Tile = { label: string; value: string };
+type Tile = { label: string; value: React.ReactNode; step?: TileStep };
 type Field = { label: string; unit: string; hint?: string };
 
 const FIELDS: Record<keyof Assumptions, Field> = {
@@ -38,7 +45,10 @@ const FIELDS: Record<keyof Assumptions, Field> = {
   tariff: { label: "Electricity tariff", unit: "₹/kWh" },
   tariffIncreasePct: { label: "Tariff increase per year", unit: "%" },
   maintenancePct: { label: "Maintenance per year", unit: "% of cost" },
-  subsidy: { label: "Subsidy", unit: "₹", hint: "Check the official PM Surya Ghar portal" },
+  subsidyPerKw: { label: "Subsidy per kW, first 2 kW", unit: "₹", hint: "Check the official PM Surya Ghar portal" },
+  subsidyThirdKw: { label: "Subsidy for the third kW", unit: "₹" },
+  loanInterestPct: { label: "Loan interest (%)", unit: "per yr" },
+  loanYears: { label: "Loan years", unit: "yrs" },
 };
 
 const GROUPS: { title: string; keys: (keyof Assumptions)[] }[] = [
@@ -47,7 +57,7 @@ const GROUPS: { title: string; keys: (keyof Assumptions)[] }[] = [
   { title: "Green roof", keys: ["greenCoverage", "greenCostPerM2", "co2PerM2"] },
   { title: "Rainwater", keys: ["runoff", "litresPerPersonDay"] },
   { title: "Climate and heat", keys: ["heatModerate", "heatHigh", "heatExtreme", "gridFactor", "co2PerTree"] },
-  { title: "Finance", keys: ["tariff", "tariffIncreasePct", "maintenancePct", "subsidy"] },
+  { title: "Finance", keys: ["tariff", "tariffIncreasePct", "maintenancePct", "subsidyPerKw", "subsidyThirdKw", "loanInterestPct", "loanYears"] },
 ];
 
 const HEAT_BADGE: Record<HeatRisk, string> = {
@@ -58,16 +68,38 @@ const HEAT_BADGE: Record<HeatRisk, string> = {
 };
 
 export function ResultsPage() {
+  const { t } = useI18n();
   const [report, setReport] = useState<Report | null | undefined>(undefined);
   const [a, setA] = useState<Assumptions>(DEFAULT_ASSUMPTIONS);
   useEffect(() => setReport(loadReport()), []);
 
   const scores = useMemo(() => report && scoreOptions(report.answers, { usable: report.usable, ...report.climate }), [report]);
 
+  // The roof outline settles for 300 ms before the panel layout (and every solar number) is redone.
+  const outline = report?.outline;
+  const outlineKey = JSON.stringify(outline ?? null);
+  const [ring, setRing] = useState<LL[] | undefined>(undefined);
+  useEffect(() => {
+    if (ring === undefined) { setRing(outline); return; }
+    const t = setTimeout(() => setRing(outline), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outlineKey]);
+  const layout = useMemo(() => panelLayoutFor(ring), [ring]);
+  // Panel count = the budget default, or the count the visitor set through the coverage field; every solar number comes from it.
+  const [manualPanels, setManualPanels] = useState<number | null>(null);
+  const budget = report?.answers.budget;
+  useEffect(() => setManualPanels(null), [budget]);
+  const solarResult = useMemo(() => (report ? solarFor(report, layout, a, manualPanels) : null), [report, layout, a, manualPanels]);
+  const previewLayout = useMemo(
+    () => (ring && layout && solarResult ? layoutPanelBlock(ring, solarResult.panels, layout) : layout),
+    [ring, layout, solarResult],
+  );
+
   useEffect(() => {
     if (!report || !scores?.length) return;
     try {
-      const s = solarImpact(report.usable, report.climate.irradiance, DEFAULT_ASSUMPTIONS);
+      const { solar: s } = solarFor(report, panelLayoutFor(report.outline), DEFAULT_ASSUMPTIONS);
       const r = rainwaterImpact(report.usable, report.climate.rainfall, DEFAULT_ASSUMPTIONS);
       const g = greenImpact(report.usable, DEFAULT_ASSUMPTIONS);
       void logRoofReport(report, scores, { solarKw: s.kw, solarKwhYear: s.kwhYear, solarSavings: s.savings, solarCost: s.cost, rainLitresYear: r.litresYear, greenCo2: g.co2 });
@@ -102,23 +134,49 @@ export function ResultsPage() {
 
   const { usable, climate } = report;
   const rest = scores.slice(1);
-  const solar = solarImpact(usable, climate.irradiance, a);
+  const { solar, rec, panels } = solarResult!;
+  const edited = panels !== rec.panels;
+  const budgetCap = BUDGET_LIMIT[report.answers.budget] ?? Infinity;
+  const coverage = {
+    pct: coveragePct(panels, usable),
+    edited,
+    overBudget: solar.cost > budgetCap,
+    // Returns the percent actually reached after rounding to whole panels.
+    onChange: (pct: number) => {
+      const cur = coveragePct(panels, usable);
+      let n = panelsForCoverage(pct, usable, rec.roofPanels);
+      // One step of the arrows always moves by at least one panel, even when a panel is more than 1% of the roof.
+      if (n === panels && Math.abs(pct - cur) === 1) n = Math.max(1, Math.min(rec.roofPanels, panels + Math.sign(pct - cur)));
+      setManualPanels(n === rec.panels ? null : n);
+      return coveragePct(n, usable);
+    },
+    onReset: () => setManualPanels(null),
+  };
+  // The Cost tile's arrows move the same panel count by one panel, so the cost changes by one panel's price.
+  const costStep: TileStep | undefined = rec.roofPanels >= 1 ? {
+    onStep: (dir) => { const n = stepPanels(panels, dir, rec.roofPanels); setManualPanels(n === rec.panels ? null : n); },
+    canUp: panels < rec.roofPanels,
+    canDown: panels > 1,
+    upLabel: "Raise cost by one solar panel",
+    downLabel: "Lower cost by one solar panel",
+    valueText: `${formatInr(solar.cost)} for ${panels} ${panels === 1 ? "panel" : "panels"}`,
+  } : undefined;
   const refl = reflectiveImpact(usable, a);
   const green = greenImpact(usable, a);
   const rain = rainwaterImpact(usable, climate.rainfall, a);
   const co2 = co2Avoided(solar.kwhYear, a);
   const waterDays = familyWaterDays(rain.litresYear, a);
   const heat = heatRisk(climate.maxTemp, a);
-  const projection = showOutlook ? solarProjection(solar.kwhYear, solar.cost, a) : null;
+  const projection = showOutlook ? solarProjection(solar.kwhYear, solar.cost, a, solar.subsidy) : null;
   const payback = isFinite(solar.payback) ? `${solar.payback.toFixed(1)} years` : "—";
 
   const tiles: Record<OptionId, Tile[]> = {
     solar: [
-      { label: "System size", value: `${solar.kw.toFixed(1)} kW` },
-      { label: "Yearly generation", value: `${formatNum(solar.kwhYear)} kWh` },
-      { label: "Yearly savings", value: formatInr(solar.savings) },
-      { label: "Cost", value: formatInr(solar.cost) },
-      { label: "Payback", value: payback },
+      { label: "System size", value: <Tween value={solar.kw} format={(n) => `${n.toFixed(1)} kW`} /> },
+      { label: "Yearly generation", value: <Tween value={solar.kwhYear} format={(n) => `${formatNum(n)} kWh`} /> },
+      { label: "Yearly savings", value: <Tween value={solar.savings} format={formatInr} /> },
+      { label: "Cost", value: <Tween value={solar.cost} format={formatInr} />, ...(costStep ? { step: costStep } : {}) },
+      { label: "Payback", value: isFinite(solar.payback) ? <Tween value={solar.payback} format={(n) => `${n.toFixed(1)} years`} /> : payback },
     ],
     reflective: [
       { label: "Indoor temperature drop", value: `${refl.dropMin}–${refl.dropMax} °C` },
@@ -138,10 +196,22 @@ export function ResultsPage() {
   tiles.hybrid = scores.filter((s) => s.id !== "hybrid").slice(0, 2)
     .flatMap((t) => tiles[t.id].slice(0, 2).map((x) => ({ label: `${t.name}: ${x.label}`, value: x.value })));
 
+  const budgetLabel = report.answers.budget && report.answers.budget !== "unsure" ? BUDGET_LABELS[report.answers.budget] : null;
+  const plural = (n: number) => `${formatNum(n)} ${n === 1 ? "panel" : "panels"}`;
   const solarNote = (
     <div className="mt-4 space-y-1 text-sm text-foreground/80">
-      <p>Your roof could host up to {solar.roofMaxKw.toFixed(1)} kW. A typical home needs about {solar.demandKw.toFixed(1)} kW.</p>
-      <p>Extra power may be exported to the grid under local net-metering rules. Please check these.</p>
+      {rec.panels === 0 ? (
+        <p>No room for full panels on this {layout ? "outline. Try adjusting the outline." : "roof."}</p>
+      ) : (
+        <>
+          <p>
+            {budgetLabel ? `At your ${budgetLabel} budget we suggest` : "We suggest"} {plural(rec.panels)} ({rec.kw.toFixed(1)} kW). Your roof fits up to {plural(rec.roofPanels)}. A typical home needs about {rec.needKw.toFixed(1)} kW.
+          </p>
+          {edited && <p>You chose {plural(panels)} ({solar.kw.toFixed(1)} kW).</p>}
+          {panels > rec.needPanels && <p>Larger than a typical home needs. Extra power may be exported to the grid.</p>}
+          {panels < rec.needPanels && <p>Smaller than a typical home needs.</p>}
+        </>
+      )}
     </div>
   );
 
@@ -156,16 +226,19 @@ export function ResultsPage() {
               Usable area {formatNum(usable)} m² (estimated) · {report.lat.toFixed(4)}, {report.lon.toFixed(4)}
             </p>
           </div>
-          <Button onClick={() => window.print()} variant="outline" className="shrink-0 print:hidden">
-            <Printer /> <span className="hidden sm:inline">Print report</span><span className="sm:hidden">Print</span>
-          </Button>
+          <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+            <LanguageSwitcher />
+            <Button onClick={() => window.print()} variant="outline" className="shrink-0 print:hidden">
+              <Printer /> <span className="hidden sm:inline">Print report</span><span className="sm:hidden">Print</span>
+            </Button>
+          </div>
         </header>
 
         <section id="summary" aria-label="Summary" className="rp-section mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <SummaryCard label="Best fit" value={best.name} sub={<><CountUp value={best.score} format={(n) => String(Math.round(n))} />/100 score</>} highlight />
-          <SummaryCard label="Saves per year" value={<CountUp value={solar.savings} format={formatInr} />} sub="with solar" />
-          <SummaryCard label="Payback" value={isFinite(solar.payback) ? <><CountUp value={solar.payback} format={(n) => n.toFixed(1)} /> yrs</> : "—"} sub="after subsidy" />
-          <SummaryCard label="CO₂ avoided / yr" value={<><CountUp value={co2.kg} format={formatNum} /> kg</>} sub={`≈ ${formatNum(co2.trees)} trees`} />
+          <SummaryCard label={t("sumBestFit")} value={t(OPTION_NAME[best.id])} sub={<><CountUp value={best.score} format={(n) => String(Math.round(n))} />{t("sumScore")}</>} highlight />
+          <SummaryCard label={t("sumSaves")} value={<CountUp value={solar.savings} format={formatInr} />} sub={t("sumWithSolar")} />
+          <SummaryCard label={t("sumPayback")} value={isFinite(solar.payback) ? <><CountUp value={solar.payback} format={(n) => n.toFixed(1)} /> {t("sumYrs")}</> : "—"} sub={t("sumAfterSubsidy")} />
+          <SummaryCard label={t("sumCo2")} value={<><CountUp value={co2.kg} format={formatNum} /> kg</>} sub={t("sumTrees", { n: formatNum(co2.trees) })} />
         </section>
 
         <div className="mt-6"><SectionNav items={navItems} /></div>
@@ -192,7 +265,7 @@ export function ResultsPage() {
               <TileGrid items={tiles[best.id]} className="mt-5" />
               {(best.id === "solar" || best.id === "hybrid") && solarNote}
               <div className="mt-5">
-                <BeforeAfter option={best.id} coverage={best.id === "solar" || best.id === "hybrid" ? panelCoverShare(solar.kw, solar.roofMaxKw) : undefined} />
+                <BeforeAfter option={best.id} outline={ring} layout={previewLayout} usable={usable} coverage={coverage} />
               </div>
             </article>
 
@@ -222,6 +295,11 @@ export function ResultsPage() {
               </div>
             )}
           </section>
+
+          {rec.roofPanels >= 1 && (
+            <SubsidyCard id="subsidy" panels={panels} maxPanels={rec.roofPanels} edited={edited} solar={solar} assumptions={a}
+              onPanels={(n) => setManualPanels(n === rec.panels ? null : n)} onReset={() => setManualPanels(null)} />
+          )}
 
           {projection && <SolarOutlook projection={projection} id="outlook" />}
 
@@ -278,12 +356,12 @@ export function ResultsPage() {
 
           <section id="checklist" className="rp-section">
             <div className="reveal rp-card rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <SectionHeading>Before you install</SectionHeading>
+              <SectionHeading>{t("chkTitle")}</SectionHeading>
               <ul className="space-y-1">
                 {CHECKLIST.map((c) => (
                   <li key={c}>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 text-sm text-foreground hover:bg-accent/60 sm:text-base">
-                      <input type="checkbox" className="size-4 accent-primary" />{c}
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-foreground hover:bg-accent/60 sm:text-base">
+                      <input type="checkbox" className="size-4 shrink-0 accent-primary" />{t(c)}
                     </label>
                   </li>
                 ))}
@@ -291,7 +369,7 @@ export function ResultsPage() {
             </div>
             <div className="rp-card mt-4 flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground sm:text-base">
               <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-              <p><strong>Planning estimate, not an engineering approval.</strong> Have a qualified professional inspect your roof.</p>
+              <p><strong>{t("chkNoteBold")}</strong> {t("chkNote")}</p>
             </div>
           </section>
         </div>
@@ -317,7 +395,7 @@ function TileGrid({ items, className }: { items: Tile[]; className?: string }) {
   if (!items.length) return null;
   return (
     <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3", className)}>
-      {items.map((t) => <StatTile key={t.label} label={t.label} value={t.value} />)}
+      {items.map((t) => t.step ? <StepperTile key={t.label} label={t.label} value={t.value} step={t.step} /> : <StatTile key={t.label} label={t.label} value={t.value} />)}
     </div>
   );
 }
@@ -333,4 +411,19 @@ function EnvCard({ icon: Icon, label, value, hint }: { icon: LucideIcon; label: 
       </div>
     </div>
   );
+}
+
+/** Solar system for a report: roof max from the panel layout (or an area estimate without an outline); panel count is the budget default unless set by hand. */
+function solarFor(report: Report, layout: PanelLayout | null, a: Assumptions, manualPanels: number | null = null) {
+  const irr = report.climate.irradiance;
+  const roofMaxKw = layout ? layout.kw : solarImpact(report.usable, irr, a).roofMaxKw;
+  const rec = recommendSolar(roofMaxKw, irr, report.answers.budget, a);
+  const panels = manualPanels === null || rec.roofPanels === 0 ? rec.panels : Math.max(1, Math.min(rec.roofPanels, manualPanels));
+  return { rec, panels, solar: { ...solarForKw(panels * PANEL_KW, irr, a), roofMaxKw } };
+}
+
+/** Panel layout for a saved outline; null for older reports without one (they fall back to an estimate). */
+function panelLayoutFor(ring: LL[] | undefined): PanelLayout | null {
+  if (!validRing(ring)) return null;
+  return ringArea(ring) < MIN_ROOF_AREA ? EMPTY_LAYOUT : layoutPanels(ring);
 }

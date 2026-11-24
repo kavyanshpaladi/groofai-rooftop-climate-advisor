@@ -8,6 +8,9 @@ export function formatInr(n: number): string {
   return `${sign}₹${Math.round(abs).toLocaleString("en-IN")}`;
 }
 
+/** Exact rupees with Indian grouping, for figures quoted in full. */
+export const formatRupees = (n: number) => (isFinite(n) ? `₹${Math.round(n).toLocaleString("en-IN")}` : "—");
+
 export const formatNum = (n: number) => Math.round(n).toLocaleString("en-IN");
 
 /** Share of the usable roof covered by panels: recommended kW over the roof's max kW, capped at 100%. */

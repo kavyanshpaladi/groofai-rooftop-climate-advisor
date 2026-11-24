@@ -1,0 +1,56 @@
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { LANGUAGES, TRANSLATIONS, type Lang, type TKey } from "@/lib/translations";
+
+const STORAGE_KEY = "groofai-lang";
+type Vars = Record<string, string | number>;
+
+const fill = (tpl: string, vars?: Vars) => (vars ? tpl.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : tpl);
+
+/** Template to React nodes: {name} takes a node, <b> is bold, <sup> is superscript. */
+function renderRich(tpl: string, vars: Record<string, ReactNode> = {}): ReactNode {
+  return tpl.split(/(<b>.*?<\/b>|<sup>.*?<\/sup>|\{\w+\})/g).map((part, i) => {
+    if (part.startsWith("<b>")) return <span key={i} className="font-semibold text-foreground">{part.slice(3, -4)}</span>;
+    if (part.startsWith("<sup>")) return <sup key={i}>{part.slice(5, -6)}</sup>;
+    const m = /^\{(\w+)\}$/.exec(part);
+    return m ? <Fragment key={i}>{vars[m[1] ?? ""]}</Fragment> : part;
+  });
+}
+
+type I18n = {
+  lang: Lang;
+  setLang: (lang: Lang) => void;
+  t: (key: TKey, vars?: Vars) => string;
+  rich: (key: TKey, vars?: Record<string, ReactNode>) => ReactNode;
+};
+
+const make = (lang: Lang, setLang: (lang: Lang) => void): I18n => ({
+  lang,
+  setLang,
+  t: (key, vars) => fill(TRANSLATIONS[lang][key], vars),
+  rich: (key, vars) => renderRich(TRANSLATIONS[lang][key], vars),
+});
+
+// Without a provider (tests, isolated renders) everything reads in English.
+const I18nContext = createContext<I18n>(make("en", () => {}));
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>("en");
+  // The saved choice is read after hydration so the server and first client render agree.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (LANGUAGES.some((l) => l.id === saved)) setLangState(saved as Lang);
+    } catch {
+      // storage unavailable: stay in English
+    }
+  }, []);
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  const setLang = useCallback((next: Lang) => {
+    setLangState(next);
+    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* choice lasts for this visit only */ }
+  }, []);
+  const value = useMemo(() => make(lang, setLang), [lang, setLang]);
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export const useI18n = () => useContext(I18nContext);

@@ -3,7 +3,16 @@ export type Answers = {
   shade: "none" | "some" | "heavy";
   access: "easy" | "limited";
   priority: "bill" | "cooler" | "garden" | "rainwater";
-  budget: "low" | "medium" | "high";
+  budget: Budget;
+};
+
+export type Budget = "low" | "medium" | "high" | "unsure";
+
+export const BUDGET_LABELS: Record<Budget, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  unsure: "Not sure",
 };
 
 export type ScoreInputs = { usable: number; irradiance: number; maxTemp: number; rainfall: number };
