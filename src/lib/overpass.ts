@@ -6,7 +6,10 @@ export const MIRRORS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
+
+const TIMEOUT_MS = 25000;
 
 const cache = new Map<string, FeatureCollection<Polygon>>();
 
@@ -52,29 +55,37 @@ export function fetchBuildingsAround(lat: number, lon: number, signal?: AbortSig
   return runQuery(`[out:json][timeout:15];way(around:15,${lat},${lon})["building"];out skel geom qt;`, signal);
 }
 
+async function tryMirror(url: string, query: string, signal: AbortSignal) {
+  const res = await fetch(url, {
+    method: "POST",
+    body: "data=" + encodeURIComponent(query),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    signal,
+  });
+  if (!res.ok) throw new Error(res.status === 429 || res.status >= 502 ? "busy" : "failed");
+  const json = (await res.json()) as { elements?: OverpassWay[]; remark?: string };
+  // Overpass reports timeouts/overload as 200 with a "remark" and partial data; never cache that.
+  if (json.remark && /error|timed out|out of memory/i.test(json.remark)) throw new Error("busy");
+  return json.elements ?? [];
+}
+
+// Ask every mirror at once and keep the first full answer; slow or overloaded mirrors are cancelled.
 async function runQuery(query: string, signal?: AbortSignal) {
-  let json: { elements: OverpassWay[] } | null = null;
-  let busy = false;
-  for (let attempt = 0; attempt < 2 && !json; attempt++) {
-    for (const url of MIRRORS) {
-      try {
-        const t = AbortSignal.timeout(15000);
-        const res = await fetch(url, {
-          method: "POST",
-          body: "data=" + encodeURIComponent(query),
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          signal: signal ? AbortSignal.any([signal, t]) : t,
-        });
-        if (res.status === 429 || res.status === 504) { busy = true; continue; }
-        if (!res.ok) continue;
-        json = (await res.json()) as { elements: OverpassWay[] };
-        break;
-      } catch (e) {
-        if (signal?.aborted) throw e;
-      }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const race = new AbortController();
+    const stop = () => race.abort();
+    signal?.addEventListener("abort", stop);
+    try {
+      const sig = AbortSignal.any([race.signal, AbortSignal.timeout(TIMEOUT_MS)]);
+      const elements = await Promise.any(MIRRORS.map((url) => tryMirror(url, query, sig)));
+      return toGeoJSON(elements);
+    } catch (e) {
+      if (signal?.aborted) throw e;
+    } finally {
+      race.abort();
+      signal?.removeEventListener("abort", stop);
     }
-    if (!json && attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
   }
-  if (!json) throw new Error(busy ? "busy" : "failed");
-  return toGeoJSON(json.elements ?? []);
+  throw new Error("failed");
 }

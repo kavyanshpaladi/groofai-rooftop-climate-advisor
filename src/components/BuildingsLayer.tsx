@@ -18,7 +18,7 @@ const MAX = 1500;
 const BASE = { color: "#3b82f6", fillColor: "#3b82f6", weight: 1, fillOpacity: 0.25 };
 const HOVER = { color: "#1d4ed8", fillColor: "#2563eb", weight: 2, fillOpacity: 0.45 };
 const tiles = new Map<string, Feature<GPolygon>[]>();
-const SS = "groofai-tile-";
+const SS = "groofai-tile-v2-";
 
 function getTile(k: string) {
   const hit = tiles.get(k);
