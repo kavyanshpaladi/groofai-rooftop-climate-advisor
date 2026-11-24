@@ -5,7 +5,8 @@ import { MapContainer, Polygon, TileLayer, ZoomControl } from "react-leaflet";
 import type { Feature, FeatureCollection, Polygon as GPolygon } from "geojson";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
-import { BuildingsLayer, toLatLngs } from "./BuildingsLayer";
+import { BuildingsLayer, loadBuildingsIn, toLatLngs } from "./BuildingsLayer";
+import { toast } from "sonner";
 import { SearchBox } from "./SearchBox";
 import { RoofPanel } from "./RoofPanel";
 import { Loader2, MousePointerClick, X } from "lucide-react";
@@ -14,7 +15,9 @@ import centroid from "@turf/centroid";
 import { fetchBuildingsAround } from "@/lib/overpass";
 
 const NOT_FOUND = "No building found here. Try zooming in or use Draw my roof.";
-import { SAMPLE_ROOF, START } from "@/lib/roof";
+import { START, pickSampleRoof } from "@/lib/roof";
+
+const NO_SAMPLE = "No buildings here. Zoom into a built-up area and try again.";
 
 export default function RoofMap() {
   const [map, setMap] = useState<L.Map | null>(null);
@@ -27,6 +30,7 @@ export default function RoofMap() {
   const [tapBusy, setTapBusy] = useState(false);
   const [tapMsg, setTapMsg] = useState<string | null>(null);
   const busyRef = useRef(false);
+  const [sampleBusy, setSampleBusy] = useState(false);
 
   const pick = (f: Feature<GPolygon>) => { setSelected(f); setMode("none"); };
   const toggle = (m: "draw" | "tap") => setMode((cur) => (cur === m ? "none" : m));
@@ -85,9 +89,21 @@ export default function RoofMap() {
     return () => { tool.disable(); };
   }, [map, drawReady, mode]);
 
-  const sample = () => {
-    pick(SAMPLE_ROOF);
-    map?.setView(START, 19);
+  const sample = async () => {
+    if (!map || sampleBusy) return;
+    setMode("none");
+    // Very wide views would mean a huge download, so ask the user to zoom in instead.
+    if (map.getZoom() < 16) { toast(NO_SAMPLE); return; }
+    const b = map.getBounds();
+    setSampleBusy(true);
+    try {
+      const all = await loadBuildingsIn(b);
+      const found = pickSampleRoof(all, map.getCenter(), (lat, lng) => b.contains([lat, lng]));
+      if (!found) { toast(NO_SAMPLE); return; }
+      pick(found);
+      map.fitBounds(L.latLngBounds(toLatLngs(found)), { padding: [40, 40], maxZoom: 19 });
+    } catch { toast(NO_SAMPLE); }
+    finally { setSampleBusy(false); }
   };
 
   const selectedId = selected ? String(selected.properties?.["id"]) : null;
@@ -112,12 +128,12 @@ export default function RoofMap() {
         <SearchBox map={map} onSearch={() => setMode("none")} />
         <div className="flex gap-2">
           <Button onClick={() => toggle("draw")} disabled={!drawReady} variant={mode === "draw" ? "default" : "outline"} aria-pressed={mode === "draw"} className={mode === "draw" ? "px-3" : "bg-card px-3"}>Draw my roof</Button>
-          <Button onClick={sample} variant="outline" className="bg-card px-3">Try a sample roof</Button>
+          <Button onClick={sample} disabled={sampleBusy} variant="outline" className="bg-card px-3">Try a sample roof</Button>
           <Button onClick={() => toggle("tap")} variant={mode === "tap" ? "default" : "outline"} aria-pressed={mode === "tap"} className={mode === "tap" ? "px-3" : "bg-card px-3"}><MousePointerClick />Tap a building</Button>
         </div>
         {mode === "tap" && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tapBusy ? "Finding building…" : "Tap a building to select its roof"}</p>}
         {mode === "tap" && tapMsg && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-destructive shadow-sm">{tapMsg}</p>}
-        {mode === "tap" && status.loading && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />Loading buildings...</p>}
+        {((mode === "tap" && status.loading) || sampleBusy) && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />Loading buildings...</p>}
         {mode === "tap" && status.error && (
           <div className="flex w-fit items-center gap-2 rounded-md bg-card px-2 py-1 text-xs shadow-sm">
             <span className="text-destructive">{status.error}</span>

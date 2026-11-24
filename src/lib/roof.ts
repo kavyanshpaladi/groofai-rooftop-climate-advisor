@@ -12,19 +12,22 @@ export function roofStats(f: Feature<Polygon>) {
 
 export const START: [number, number] = [17.385, 78.4867];
 
-// Hard-coded sample building near the start point (~25m x 18m).
-export const SAMPLE_ROOF: Feature<Polygon> = {
-  type: "Feature",
-  id: "sample",
-  properties: { id: "sample" },
-  geometry: {
-    type: "Polygon",
-    coordinates: [[
-      [78.48655, 17.38515],
-      [78.48679, 17.38515],
-      [78.48679, 17.38531],
-      [78.48655, 17.38531],
-      [78.48655, 17.38515],
-    ]],
-  },
-};
+export const SAMPLE_MIN_AREA = 150;
+export const SAMPLE_MAX_AREA = 1500;
+
+// Building with area 150–1500 m² whose centroid is closest to the map centre (and inside the view).
+export function pickSampleRoof(
+  features: Feature<Polygon>[],
+  center: { lat: number; lng: number },
+  inView: (lat: number, lng: number) => boolean,
+) {
+  const k = Math.cos((center.lat * Math.PI) / 180);
+  let best: Feature<Polygon> | null = null; let bestD = Infinity;
+  for (const f of features) {
+    const s = roofStats(f);
+    if (s.area < SAMPLE_MIN_AREA || s.area > SAMPLE_MAX_AREA || !inView(s.lat, s.lon)) continue;
+    const d = (s.lat - center.lat) ** 2 + ((s.lon - center.lng) * k) ** 2;
+    if (d < bestD) { bestD = d; best = f; }
+  }
+  return best;
+}

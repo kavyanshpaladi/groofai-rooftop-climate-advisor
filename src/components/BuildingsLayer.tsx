@@ -34,6 +34,38 @@ function putTile(k: string, f: Feature<GPolygon>[]) {
   try { sessionStorage.setItem(SS + k, JSON.stringify(f)); } catch { /* quota */ }
 }
 
+// Fetch the given missing tiles in one light query and cache each tile's buildings.
+async function fillTiles(missing: [number, number][], signal?: AbortSignal) {
+  const mi = missing.map((m) => m[0]), mj = missing.map((m) => m[1]);
+  const box = { south: Math.min(...mi) * TILE, north: (Math.max(...mi) + 1) * TILE, west: Math.min(...mj) * TILE, east: (Math.max(...mj) + 1) * TILE };
+  const fc = await fetchBuildingsLight(box, signal);
+  const buckets = new Map<string, Feature<GPolygon>[]>(missing.map(([i, j]) => [`${i},${j}`, []]));
+  for (const f of fc.features) {
+    const [lon, lat] = f.geometry.coordinates[0]?.[0] ?? [];
+    if (typeof lon !== "number" || typeof lat !== "number") continue;
+    buckets.get(`${Math.floor(lat / TILE)},${Math.floor(lon / TILE)}`)?.push(f);
+  }
+  buckets.forEach((f, k) => putTile(k, f));
+}
+
+// All buildings in the given bounds, using cached tiles and fetching only the missing ones.
+export async function loadBuildingsIn(b: { getSouth(): number; getNorth(): number; getWest(): number; getEast(): number }, signal?: AbortSignal) {
+  const i0 = Math.floor(b.getSouth() / TILE), i1 = Math.floor(b.getNorth() / TILE);
+  const j0 = Math.floor(b.getWest() / TILE), j1 = Math.floor(b.getEast() / TILE);
+  const keys: string[] = []; const missing: [number, number][] = [];
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+    const k = `${i},${j}`; keys.push(k);
+    if (!getTile(k)) missing.push([i, j]);
+  }
+  if (missing.length) await fillTiles(missing, signal);
+  const seen = new Set<string>(); const out: Feature<GPolygon>[] = [];
+  for (const k of keys) for (const f of getTile(k) ?? []) {
+    const id = String(f.properties?.["id"]);
+    if (!seen.has(id)) { seen.add(id); out.push(f); }
+  }
+  return out;
+}
+
 const toLatLngs = (f: Feature<GPolygon>): [number, number][] => (f.geometry.coordinates[0] ?? []).flatMap(([lon, lat]) => typeof lon === "number" && typeof lat === "number" ? [[lat, lon] as [number, number]] : []);
 
 export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect, retryKey }: Props) {
@@ -77,19 +109,10 @@ export function BuildingsLayer({ active, selectedId, onData, onStatus, onSelect,
       }
       show(keys);
       if (!missing.length) { onStatus({ loading: false, error: null }); return; }
-      const mi = missing.map((m) => m[0]), mj = missing.map((m) => m[1]);
-      const box = { south: Math.min(...mi) * TILE, north: (Math.max(...mi) + 1) * TILE, west: Math.min(...mj) * TILE, east: (Math.max(...mj) + 1) * TILE };
       const c = new AbortController(); ctrl.current = c;
       onStatus({ loading: true, error: null });
       try {
-        const fc = await fetchBuildingsLight(box, c.signal);
-        const buckets = new Map<string, Feature<GPolygon>[]>(missing.map(([i, j]) => [`${i},${j}`, []]));
-        for (const f of fc.features) {
-          const [lon, lat] = f.geometry.coordinates[0]?.[0] ?? [];
-          if (typeof lon !== "number" || typeof lat !== "number") continue;
-          buckets.get(`${Math.floor(lat / TILE)},${Math.floor(lon / TILE)}`)?.push(f);
-        }
-        buckets.forEach((f, k) => putTile(k, f));
+        await fillTiles(missing, c.signal);
         if (c.signal.aborted) return;
         show(keys);
         onStatus({ loading: false, error: null });
