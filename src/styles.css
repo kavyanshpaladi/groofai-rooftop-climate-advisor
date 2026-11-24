@@ -43,6 +43,10 @@
   --color-sun: var(--sun);
   --color-leaf: var(--leaf);
   --color-rain: var(--rain);
+  --color-heat-low: var(--heat-low);
+  --color-heat-moderate: var(--heat-moderate);
+  --color-heat-high: var(--heat-high);
+  --color-heat-extreme: var(--heat-extreme);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -87,6 +91,10 @@
   --sun: oklch(0.7 0.16 70);
   --leaf: oklch(0.5 0.15 150);
   --rain: oklch(0.55 0.13 245);
+  --heat-low: oklch(0.5 0.14 150);
+  --heat-moderate: oklch(0.6 0.14 80);
+  --heat-high: oklch(0.6 0.17 50);
+  --heat-extreme: oklch(0.55 0.21 27);
   --radius: 0.625rem;
   --background: oklch(0.99 0.005 150);
   --foreground: oklch(0.22 0.03 155);
@@ -292,3 +300,24 @@
 .badge-dot { box-shadow: 0 0 0 0 var(--primary); animation: badge-pulse 2s ease-out infinite; }
 @keyframes badge-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 70%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
 @media (prefers-reduced-motion: reduce), print { .feature-card, .badge-dot { animation: none; transform: none; } }
+@media print {
+  .roof-results { max-width: 100%; }
+  .outlook svg { max-height: 200px; }
+}
+
+/* Results report: section fade-in, sticky-nav offsets, print layout */
+.rp-section { scroll-margin-top: 72px; }
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity 500ms ease-out, transform 500ms ease-out; }
+.reveal.is-visible { opacity: 1; transform: none; }
+.score-ring { transition: stroke-dashoffset 900ms cubic-bezier(.2,.8,.2,1); }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .score-ring { transition: none; }
+}
+@media print {
+  .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .rp-card, .rp-section { break-inside: avoid; box-shadow: none; }
+  .score-ring { transition: none; }
+}
