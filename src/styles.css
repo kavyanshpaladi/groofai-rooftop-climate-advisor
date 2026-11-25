@@ -403,3 +403,6 @@
 }
 
 html.lang-pending body { visibility: hidden; }
+
+/* Letter spacing splits Hindi and Telugu letter clusters apart, so those languages keep normal spacing. */
+html:lang(hi) [class*="tracking-"], html:lang(te) [class*="tracking-"] { letter-spacing: normal; }

@@ -1,5 +1,7 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { LANGUAGES, TRANSLATIONS, type Lang, type TKey } from "@/lib/translations";
+import { APP_TEXT } from "@/lib/translations-app";
+import { RESULTS_TEXT } from "@/lib/translations-results";
 
 const STORAGE_KEY = "groofai-lang";
 let savedLang: string | null = null;
@@ -22,6 +24,7 @@ type I18n = {
   setLang: (lang: Lang) => void;
   t: (key: TKey, vars?: Vars) => string;
   rich: (key: TKey, vars?: Record<string, ReactNode>) => ReactNode;
+  tx: (text: string, vars?: Vars) => string;
 };
 
 const make = (lang: Lang, setLang: (lang: Lang) => void): I18n => ({
@@ -29,6 +32,7 @@ const make = (lang: Lang, setLang: (lang: Lang) => void): I18n => ({
   setLang,
   t: (key, vars) => fill(TRANSLATIONS[lang][key], vars),
   rich: (key, vars) => renderRich(TRANSLATIONS[lang][key], vars),
+  tx: (text, vars) => fill(lang === "en" ? text : APP_TEXT[lang][text] ?? RESULTS_TEXT[lang][text] ?? text, vars),
 });
 
 // Without a provider (tests, isolated renders) everything reads in English.

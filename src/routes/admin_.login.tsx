@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { backendConnected } from "@/lib/backend";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/admin_/login")({
   ssr: false,
@@ -22,6 +24,7 @@ export const Route = createFileRoute("/admin_/login")({
 });
 
 function AdminLogin() {
+  const { tx } = useI18n();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -46,7 +49,7 @@ function AdminLogin() {
     });
     if (result.error) {
       setBusy(false);
-      return setMsg({ kind: "error", text: result.error.message || "Google sign-in failed. Please try again." });
+      return setMsg({ kind: "error", text: result.error.message || tx("Google sign-in failed. Please try again.") });
     }
     if (result.redirected) return;
     navigate({ to: "/admin", replace: true });
@@ -65,15 +68,16 @@ function AdminLogin() {
       const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/admin` } });
       setBusy(false);
       if (error) return setMsg({ kind: "error", text: error.message });
-      setMsg({ kind: "info", text: "Check your email and click the confirmation link, then sign in." });
+      setMsg({ kind: "info", text: tx("Check your email and click the confirmation link, then sign in.") });
       setMode("signin");
     }
   }
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5">
-      <p className="text-sm font-semibold text-primary">groofai admin</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">{mode === "signin" ? "Sign in" : "Create account"}</h1>
+      <div className="mb-6 flex justify-end"><LanguageSwitcher /></div>
+      <p className="text-sm font-semibold text-primary">{tx("groofai admin")}</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">{tx(mode === "signin" ? "Sign in" : "Create account")}</h1>
       <button
         type="button"
         onClick={signInWithGoogle}
@@ -85,19 +89,19 @@ function AdminLogin() {
         Continue with Google
       </button>
       <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="h-px flex-1 bg-border" />or use email<span className="h-px flex-1 bg-border" />
+        <span className="h-px flex-1 bg-border" />{tx("or use email")}<span className="h-px flex-1 bg-border" />
       </div>
       <form onSubmit={submit} className="space-y-3">
-        <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-        <input type="password" required minLength={6} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-        {!connected && <p className="text-sm text-destructive">Admin sign-in is unavailable until a database is connected.</p>}
+        <input type="email" required placeholder={tx("Email")} value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+        <input type="password" required minLength={6} placeholder={tx("Password")} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+        {!connected && <p className="text-sm text-destructive">{tx("Admin sign-in is unavailable until a database is connected.")}</p>}
         {msg && <p className={msg.kind === "error" ? "text-sm text-destructive" : "text-sm text-primary"}>{msg.text}</p>}
-        <Button type="submit" disabled={busy || !connected} className="w-full">{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</Button>
+        <Button type="submit" disabled={busy || !connected} className="w-full">{tx(busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account")}</Button>
       </form>
       <Button variant="link" className="mt-2" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
-        {mode === "signin" ? "No account yet? Create one" : "Already have an account? Sign in"}
+        {tx(mode === "signin" ? "No account yet? Create one" : "Already have an account? Sign in")}
       </Button>
-      <Button asChild variant="link"><Link to="/">← Back to home</Link></Button>
+      <Button asChild variant="link"><Link to="/">{tx("← Back to home")}</Link></Button>
     </main>
   );
 }

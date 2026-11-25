@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LANGUAGES, TRANSLATIONS, type TKey } from "./translations";
+import { RESULTS_ROWS } from "./translations-results";
 
 const slots = (s: string) => [...s.matchAll(/\{\w+\}|<\/?(?:b|sup)>/g)].map((m) => m[0]).sort();
 
@@ -22,6 +23,15 @@ describe("translations", () => {
       expect(TRANSLATIONS[lang].loanHelper).toContain("5.75–7%");
       expect(TRANSLATIONS[lang].loanHelper).toContain("3 kW");
       expect(TRANSLATIONS[lang].src5d).toContain("6.00%");
+    }
+  });
+
+  it("keeps every runtime value in the results page text in Hindi and Telugu", () => {
+    for (const [en, hi, te] of RESULTS_ROWS) {
+      for (const text of [hi, te]) {
+        expect(text.trim(), en).not.toBe("");
+        expect(slots(text), en).toEqual(slots(en));
+      }
     }
   });
 });

@@ -45,7 +45,7 @@ const steps = [
 ];
 
 export function LandingPage() {
-  const { t } = useI18n();
+  const { t, tx } = useI18n();
   return (
     <main className="min-h-dvh bg-background">
       <section className="relative overflow-hidden">
@@ -64,23 +64,23 @@ export function LandingPage() {
       </section>
 
       <section className="mx-auto max-w-5xl px-5 py-16">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Three upgrades, one roof</p>
-        <h2 className="mt-2 text-3xl font-black text-foreground sm:text-5xl">Three ways your roof can fight climate change</h2>
-        <p className="mt-4 max-w-2xl text-lg text-muted-foreground">Cities trap heat, flood in heavy rain and burn fossil fuels for power. Your roof can help with all three. groofai checks your local sun, heat and rainfall to show which upgrade gives your roof the biggest win.</p>
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">{tx("Three upgrades, one roof")}</p>
+        <h2 className="mt-2 text-3xl font-black text-foreground sm:text-5xl">{tx("Three ways your roof can fight climate change")}</h2>
+        <p className="mt-4 max-w-2xl text-lg text-muted-foreground">{tx("Cities trap heat, flood in heavy rain and burn fossil fuels for power. Your roof can help with all three. groofai checks your local sun, heat and rainfall to show which upgrade gives your roof the biggest win.")}</p>
         <div className="mt-12 grid gap-8 sm:grid-cols-3 [perspective:1000px]">
           {features.map((f) => (
             <article key={f.title} className="feature-card group relative overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
               <div className="relative h-52 overflow-hidden">
-                <img src={f.img} alt={f.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <img src={f.img} alt={tx(f.title)} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" />
                 <span className="absolute left-4 top-4 grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"><f.icon className="size-6" /></span>
-                <h3 className="absolute bottom-3 left-4 text-3xl font-black text-primary-foreground">{f.title}</h3>
+                <h3 className="absolute bottom-3 left-4 text-3xl font-black text-primary-foreground">{tx(f.title)}</h3>
               </div>
               <div className="p-6">
-                <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{f.stat}</p>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.text}</p>
+                <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{tx(f.stat)}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{tx(f.text)}</p>
                 <ul className="mt-4 flex flex-wrap gap-2">
-                  {f.points.map((pt) => <li key={pt} className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground">✓ {pt}</li>)}
+                  {f.points.map((pt) => <li key={pt} className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground">✓ {tx(pt)}</li>)}
                 </ul>
               </div>
               <div className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-primary transition-transform duration-500 group-hover:scale-x-100" />
@@ -91,9 +91,9 @@ export function LandingPage() {
 
       <section className="howitworks text-primary-foreground">
         <div className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
-          <p className="badge-glow mb-5 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary shadow-xl"><span className="badge-dot size-2 rounded-full bg-primary" />Two minutes<span className="text-sun">✦</span>No sign-up</p>
-          <h2 className="text-3xl font-bold sm:text-4xl">How it works</h2>
-          <p className="mt-3 max-w-2xl text-base text-primary-foreground/85">Three steps from a blank rooftop to a decision you can explain — every number comes from your building's own sunlight, heat and rain.</p>
+          <p className="badge-glow mb-5 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary shadow-xl"><span className="badge-dot size-2 rounded-full bg-primary" />{tx("Two minutes")}<span className="text-sun">✦</span>{tx("No sign-up")}</p>
+          <h2 className="text-3xl font-bold sm:text-4xl">{tx("How it works")}</h2>
+          <p className="mt-3 max-w-2xl text-base text-primary-foreground/85">{tx("Three steps from a blank rooftop to a decision you can explain — every number comes from your building's own sunlight, heat and rain.")}</p>
           <ol className="mt-10 grid gap-6 sm:grid-cols-3 [perspective:1000px]">
             {steps.map((s) => (
               <li key={s.n} className="card-3d relative rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
@@ -104,20 +104,20 @@ export function LandingPage() {
                   </span>
                   <span className={`text-4xl font-black leading-none ${s.num}`}>{s.n}</span>
                 </div>
-                <h3 className="mt-4 text-lg font-bold text-foreground">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
+                <h3 className="mt-4 text-lg font-bold text-foreground">{tx(s.title)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{tx(s.text)}</p>
               </li>
             ))}
           </ol>
           <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Button asChild variant="secondary" size="lg" className="h-12 px-6"><Link to="/map">Start now <ArrowRight /></Link></Button>
+            <Button asChild variant="secondary" size="lg" className="h-12 px-6"><Link to="/map">{tx("Start now")} <ArrowRight /></Link></Button>
             <RoofCounter />
           </div>
         </div>
       </section>
 
       <footer className="bg-footer-bg py-8 text-center">
-        <p className="text-sm font-medium text-footer-foreground">© {new Date().getFullYear()} groofai. All rights reserved.</p>
+        <p className="text-sm font-medium text-footer-foreground">© {new Date().getFullYear()} {tx("groofai. All rights reserved.")}</p>
       </footer>
     </main>
   );
