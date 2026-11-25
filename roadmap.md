@@ -38,4 +38,4 @@
 
 # Before you install section
 - [x] Subsidy explainer box: three plain-language steps worked out with the chosen size, visible "Check it yourself" sources, last-checked line
-- [ ] Make the "Before you install" checklist more striking (asked 24 Nov, superseded by the subsidy note; confirm with user)
+- [x] Make the "Before you install" checklist more striking (numbered cards)

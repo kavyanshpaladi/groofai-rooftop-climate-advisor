@@ -9,6 +9,7 @@ import { BuildingsLayer, loadBuildingsIn, toLatLngs } from "./BuildingsLayer";
 import { RepeatButton } from "./RepeatButton";
 import { toast } from "sonner";
 import { SearchBox } from "./SearchBox";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { RoofPanel } from "./RoofPanel";
 import { Copy, Eye, EyeOff, Loader2, Move, MousePointerClick, RotateCcw, Spline, X } from "lucide-react";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
@@ -377,7 +378,10 @@ export default function RoofMap() {
       </MapContainer>
 
       <div ref={controlsRef} className="absolute inset-x-3 top-3 z-[1000] flex flex-col gap-2 md:left-4 md:right-auto md:w-96">
-        <SearchBox map={map} onSearch={() => setMode("none")} />
+        <div className="flex items-start gap-2">
+          <SearchBox map={map} onSearch={() => setMode("none")} />
+          <LanguageSwitcher className="h-11 md:h-10" />
+        </div>
         <div className="flex gap-2">
           <Button onClick={() => toggle("draw")} disabled={!drawReady} variant={mode === "draw" ? "default" : "outline"} aria-pressed={mode === "draw"} className={mode === "draw" ? "px-3" : "bg-card px-3"}>Draw my roof</Button>
           <Button onClick={sample} disabled={sampleBusy} variant="outline" className="bg-card px-3">{sampleBusy && <Loader2 className="animate-spin" />}Try a sample roof</Button>

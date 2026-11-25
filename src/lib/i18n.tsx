@@ -2,6 +2,7 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, u
 import { LANGUAGES, TRANSLATIONS, type Lang, type TKey } from "@/lib/translations";
 
 const STORAGE_KEY = "groofai-lang";
+let savedLang: string | null = null;
 type Vars = Record<string, string | number>;
 
 const fill = (tpl: string, vars?: Vars) => (vars ? tpl.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : tpl);
@@ -39,12 +40,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
+      savedLang = saved;
       if (LANGUAGES.some((l) => l.id === saved)) setLangState(saved as Lang);
     } catch {
       // storage unavailable: stay in English
     }
   }, []);
-  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    // Reveal the page once the saved language is on screen (hidden by the head script).
+    if (!LANGUAGES.some((l) => l.id === savedLang) || savedLang === lang) document.documentElement.classList.remove("lang-pending");
+  }, [lang]);
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
     try { localStorage.setItem(STORAGE_KEY, next); } catch { /* choice lasts for this visit only */ }

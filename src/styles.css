@@ -401,3 +401,5 @@
 @media (prefers-reduced-motion: reduce) {
   .whatif-range::-webkit-slider-thumb, .whatif-range::-moz-range-thumb { transition: none; }
 }
+
+html.lang-pending body { visibility: hidden; }

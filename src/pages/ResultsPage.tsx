@@ -357,11 +357,13 @@ export function ResultsPage() {
           <section id="checklist" className="rp-section">
             <div className="reveal rp-card rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <SectionHeading>{t("chkTitle")}</SectionHeading>
-              <ul className="space-y-1">
-                {CHECKLIST.map((c) => (
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {CHECKLIST.map((c, i) => (
                   <li key={c}>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-foreground hover:bg-accent/60 sm:text-base">
-                      <input type="checkbox" className="size-4 shrink-0 accent-primary" />{t(c)}
+                    <label className="flex h-full min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm text-foreground transition-colors hover:border-primary/50 hover:bg-primary/10 has-[:checked]:border-primary has-[:checked]:bg-primary/15 sm:text-base">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
+                      <span className="flex-1">{t(c)}</span>
+                      <input type="checkbox" className="size-5 shrink-0 accent-primary" />
                     </label>
                   </li>
                 ))}

@@ -98,9 +98,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: `try{var l=localStorage.getItem("groofai-lang");if(l==="hi"||l==="te"){document.documentElement.lang=l;document.documentElement.classList.add("lang-pending");setTimeout(function(){document.documentElement.classList.remove("lang-pending")},1500)}}catch(e){}` }} />
       </head>
       <body>
         {children}
