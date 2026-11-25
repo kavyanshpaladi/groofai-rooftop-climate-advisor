@@ -16,6 +16,7 @@ import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { fetchBuildingsAround } from "@/lib/overpass";
 import { BUILDING_OFFSET_M, START, SAMPLE_ROOF_CENTER, SAMPLE_ROOF_POLYGON, SAMPLE_ROOF_ZOOM, metersToDegrees, outlineCoords, pickRoofAt, sampleRoofFeature, shiftFeature, type Offset } from "@/lib/roof";
 import { themeColor } from "@/lib/map-colors";
+import { useI18n } from "@/lib/i18n";
 
 
 type Mode = "none" | "draw" | "tap";
@@ -42,6 +43,7 @@ const shiftRing = (ring: LL[], east: number, north: number): LL[] => {
 };
 
 export default function RoofMap() {
+  const { tx } = useI18n();
   const [map, setMap] = useState<L.Map | null>(null);
   const [data, setData] = useState<FeatureCollection<GPolygon> | null>(null);
   const [status, setStatus] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
@@ -122,8 +124,8 @@ export default function RoofMap() {
     }
   };
   const copyOffset = async () => {
-    try { await navigator.clipboard.writeText(JSON.stringify(offsetRef.current)); toast("Copied"); }
-    catch { toast("Couldn't copy to the clipboard"); }
+    try { await navigator.clipboard.writeText(JSON.stringify(offsetRef.current)); toast(tx("Copied")); }
+    catch { toast(tx("Couldn't copy to the clipboard")); }
   };
   const resetOffset = () => {
     const o = offsetRef.current;
@@ -343,7 +345,7 @@ export default function RoofMap() {
       found = pickRoofAt(feats.map((f) => shiftFeature(f, offsetRef.current)), c, 0);
     } catch { /* shown below */ }
     setSampleBusy(false);
-    if (!found) { toast(SAMPLE_FAILED); map.flyTo([c.lat, c.lng], SAMPLE_ROOF_ZOOM); return; }
+    if (!found) { toast(tx(SAMPLE_FAILED)); map.flyTo([c.lat, c.lng], SAMPLE_ROOF_ZOOM); return; }
     pick(found); fitOutline(toLatLngs(found));
   };
 
@@ -351,8 +353,8 @@ export default function RoofMap() {
     if (!selected) return;
     try {
       await navigator.clipboard.writeText(JSON.stringify(outlineCoords(selected)));
-      toast("Copied");
-    } catch { toast("Couldn't copy to the clipboard"); }
+      toast(tx("Copied"));
+    } catch { toast(tx("Couldn't copy to the clipboard")); }
   };
 
   const selectedId = selected ? String(selected.properties?.["id"]) : null;
@@ -383,34 +385,34 @@ export default function RoofMap() {
           <LanguageSwitcher className="h-11 md:h-10" />
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => toggle("draw")} disabled={!drawReady} variant={mode === "draw" ? "default" : "outline"} aria-pressed={mode === "draw"} className={mode === "draw" ? "px-3" : "bg-card px-3"}>Draw my roof</Button>
-          <Button onClick={sample} disabled={sampleBusy} variant="outline" className="bg-card px-3">{sampleBusy && <Loader2 className="animate-spin" />}Try a sample roof</Button>
-          <Button onClick={() => toggle("tap")} variant={mode === "tap" ? "default" : "outline"} aria-pressed={mode === "tap"} className={mode === "tap" ? "px-3" : "bg-card px-3"}><MousePointerClick />Tap a building</Button>
+          <Button onClick={() => toggle("draw")} disabled={!drawReady} variant={mode === "draw" ? "default" : "outline"} aria-pressed={mode === "draw"} className={mode === "draw" ? "px-3" : "bg-card px-3"}>{tx("Draw my roof")}</Button>
+          <Button onClick={sample} disabled={sampleBusy} variant="outline" className="bg-card px-3">{sampleBusy && <Loader2 className="animate-spin" />}{tx("Try a sample roof")}</Button>
+          <Button onClick={() => toggle("tap")} variant={mode === "tap" ? "default" : "outline"} aria-pressed={mode === "tap"} className={mode === "tap" ? "px-3" : "bg-card px-3"}><MousePointerClick />{tx("Tap a building")}</Button>
         </div>
         {selected && mode === "none" && (
           <div className="flex flex-wrap items-center gap-2">
-            <Button {...toolBtn("move")} disabled={hidden}><Move />Move outline</Button>
-            <Button {...toolBtn("corners")} disabled={!drawReady || hidden}><Spline />Edit corners</Button>
-            <Button onClick={resetOutline} disabled={hidden} size="sm" variant="outline" className="bg-card px-2.5"><RotateCcw />Reset outline</Button>
-            <Button onClick={() => setHidden((h) => !h)} aria-pressed={hidden} size="sm" variant="outline" className="bg-card px-2.5" aria-label={hidden ? "Show outline" : "Hide outline"} title={hidden ? "Show outline" : "Hide outline"}>{hidden ? <EyeOff /> : <Eye />}{hidden ? "Show outline" : "Hide outline"}</Button>
+            <Button {...toolBtn("move")} disabled={hidden}><Move />{tx("Move outline")}</Button>
+            <Button {...toolBtn("corners")} disabled={!drawReady || hidden}><Spline />{tx("Edit corners")}</Button>
+            <Button onClick={resetOutline} disabled={hidden} size="sm" variant="outline" className="bg-card px-2.5"><RotateCcw />{tx("Reset outline")}</Button>
+            <Button onClick={() => setHidden((h) => !h)} aria-pressed={hidden} size="sm" variant="outline" className="bg-card px-2.5" aria-label={tx(hidden ? "Show outline" : "Hide outline")} title={tx(hidden ? "Show outline" : "Hide outline")}>{hidden ? <EyeOff /> : <Eye />}{tx(hidden ? "Show outline" : "Hide outline")}</Button>
             {dev && <Button onClick={copyOutline} size="sm" variant="outline" className="bg-card px-2.5"><Copy />Copy outline coordinates</Button>}
             {editTool !== "none" && (
               <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">
-                {editTool === "move" ? "Drag the outline onto your roof" : "Drag corners to fit. Drag a midpoint to add one; right-click a corner to delete it"}
+                {tx(editTool === "move" ? "Drag the outline onto your roof" : "Drag corners to fit. Drag a midpoint to add one; right-click a corner to delete it")}
               </p>
             )}
           </div>
         )}
-        {mode === "tap" && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tapBusy ? "Finding building…" : "Tap a building to select its roof"}</p>}
-        {mode === "tap" && status.loading && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />Loading buildings...</p>}
+        {mode === "tap" && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tx(tapBusy ? "Finding building…" : "Tap a building to select its roof")}</p>}
+        {mode === "tap" && status.loading && <p className="pointer-events-none flex w-fit items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm"><Loader2 className="size-3 animate-spin" />{tx("Loading buildings...")}</p>}
         {mode === "tap" && status.error && (
           <div className="flex w-fit items-center gap-2 rounded-md bg-card px-2 py-1 text-xs shadow-sm">
-            <span className="text-destructive">{status.error}</span>
-            <Button onClick={() => setRetryKey((k) => k + 1)} size="sm" className="h-6 px-2">Retry</Button>
-            <Button onClick={() => setStatus({ loading: false, error: null })} size="icon" variant="ghost" className="size-6" aria-label="Dismiss"><X /></Button>
+            <span className="text-destructive">{tx(status.error)}</span>
+            <Button onClick={() => setRetryKey((k) => k + 1)} size="sm" className="h-6 px-2">{tx("Retry")}</Button>
+            <Button onClick={() => setStatus({ loading: false, error: null })} size="icon" variant="ghost" className="size-6" aria-label={tx("Dismiss")}><X /></Button>
           </div>
         )}
-        {mode === "tap" && map && !status.loading && !status.error && !data && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">Zoom in to see buildings</p>}
+        {mode === "tap" && map && !status.loading && !status.error && !data && <p className="w-fit rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">{tx("Zoom in to see buildings")}</p>}
       </div>
 
       {dev && (

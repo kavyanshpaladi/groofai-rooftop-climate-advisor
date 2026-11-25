@@ -8,6 +8,7 @@ import { MAX_DRAWN_PANELS, coveragePct, ringArea, validRing, type LL, type Panel
 import { themeColor } from "@/lib/map-colors";
 import { formatNum } from "@/lib/format";
 import { MIN_ROOF_AREA } from "@/lib/roof";
+import { useI18n } from "@/lib/i18n";
 
 const TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const LABEL: Record<OptionId, string> = {
@@ -39,6 +40,7 @@ export type Coverage = { pct: number; edited: boolean; overBudget: boolean; onCh
 
 /** Small number field for the roof-coverage percent; commits 300 ms after the last change and then shows the percent actually reached. */
 function CoverageField({ pct, onCommit }: { pct: number; onCommit: (pct: number) => number }) {
+  const { tx } = useI18n();
   const [text, setText] = useState(String(pct));
   const timer = useRef(0);
   const live = useRef({ pct, onCommit });
@@ -54,7 +56,7 @@ function CoverageField({ pct, onCommit }: { pct: number; onCommit: (pct: number)
   };
   return (
     <input
-      type="number" min={1} max={100} step={1} inputMode="numeric" aria-label="Share of usable roof covered by panels, in percent"
+      type="number" min={1} max={100} step={1} inputMode="numeric" aria-label={tx("Share of usable roof covered by panels, in percent")}
       value={text}
       onChange={(e) => { const v = e.target.value; setText(v); window.clearTimeout(timer.current); timer.current = window.setTimeout(() => commit(v), 300); }}
       onBlur={(e) => { if (e.target.value !== String(live.current.pct)) commit(e.target.value); }}
@@ -64,6 +66,7 @@ function CoverageField({ pct, onCommit }: { pct: number; onCommit: (pct: number)
 }
 
 export function BeforeAfter({ option, outline, layout: fullLayout, usable, coverage }: { option: OptionId; outline: LL[] | undefined; layout: PanelLayout | null; usable: number; coverage?: Coverage }) {
+  const { tx } = useI18n();
   // The outline arrives already settled (300 ms) together with its panel layout.
   const ring = outline;
   const valid = validRing(ring);
@@ -253,30 +256,31 @@ export function BeforeAfter({ option, outline, layout: fullLayout, usable, cover
     setPos(Math.max(0, Math.min(100, next)));
   };
 
-  const label = LABEL[option];
+  const label = tx(LABEL[option]);
+  const [coverBefore = "", coverAfter = ""] = tx("Panels cover about {pct}% of your usable roof").split("{pct}");
   const caption = usesPanels
     ? layout && layout.count > 0
       ? <>
-          Panels cover about{coverage ? <CoverageField pct={coverage.pct} onCommit={coverage.onChange} /> : ` ${coveragePct(layout.count, usable)}`}% of your usable roof
-          {layout.count > MAX_DRAWN_PANELS ? ` (showing first ${formatNum(MAX_DRAWN_PANELS)} panels)` : ""}
-          {coverage?.overBudget && <span className="ml-2 text-xs font-semibold text-destructive">Above your budget</span>}
-          {coverage?.edited && <button type="button" onClick={coverage.onReset} className="ml-2 text-xs font-medium text-primary underline underline-offset-2">Reset to budget default</button>}
+          {coverBefore.trimEnd()}{coverage ? <CoverageField pct={coverage.pct} onCommit={coverage.onChange} /> : ` ${coveragePct(layout.count, usable)}`}{coverAfter}
+          {layout.count > MAX_DRAWN_PANELS ? tx(" (showing first {n} panels)", { n: formatNum(MAX_DRAWN_PANELS) }) : ""}
+          {coverage?.overBudget && <span className="ml-2 text-xs font-semibold text-destructive">{tx("Above your budget")}</span>}
+          {coverage?.edited && <button type="button" onClick={coverage.onReset} className="ml-2 text-xs font-medium text-primary underline underline-offset-2">{tx("Reset to budget default")}</button>}
         </>
-      : "No room for full panels on this outline. Try adjusting the outline."
-    : option === "green" ? "Planting shown across your roof outline"
-    : option === "reflective" ? "Cool reflective coating shown across your roof outline"
-    : option === "rainwater" ? "Rain collected from your roof, drained at the marked corner"
-    : `${label} shown across your roof outline`;
+      : tx("No room for full panels on this outline. Try adjusting the outline.")
+    : option === "green" ? tx("Planting shown across your roof outline")
+    : option === "reflective" ? tx("Cool reflective coating shown across your roof outline")
+    : option === "rainwater" ? tx("Rain collected from your roof, drained at the marked corner")
+    : tx("{label} shown across your roof outline", { label });
 
   if (!canShow) {
     return (
       <div className="print:hidden">
         <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-xl border border-border bg-muted p-4 text-center">
-          <p className="font-semibold text-foreground">{tooSmall ? "Roof too small for a preview" : "Couldn't load the roof preview"}</p>
+          <p className="font-semibold text-foreground">{tx(tooSmall ? "Roof too small for a preview" : "Couldn't load the roof preview")}</p>
           {!tooSmall && (
             <>
-              <p className="text-sm text-foreground/75">Select your roof on the map again to see it here.</p>
-              <Button asChild variant="outline" size="sm"><Link to="/map">Back to map</Link></Button>
+              <p className="text-sm text-foreground/75">{tx("Select your roof on the map again to see it here.")}</p>
+              <Button asChild variant="outline" size="sm"><Link to="/map">{tx("Back to map")}</Link></Button>
             </>
           )}
         </div>
@@ -290,11 +294,11 @@ export function BeforeAfter({ option, outline, layout: fullLayout, usable, cover
         ref={boxRef}
         role="slider"
         tabIndex={0}
-        aria-label="Before and after comparison"
+        aria-label={tx("Before and after comparison")}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(pos)}
-        aria-valuetext={`${Math.round(pos)}% before, ${100 - Math.round(pos)}% after`}
+        aria-valuetext={tx("{a}% before, {b}% after", { a: Math.round(pos), b: 100 - Math.round(pos) })}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
@@ -310,8 +314,8 @@ export function BeforeAfter({ option, outline, layout: fullLayout, usable, cover
           <div className={`absolute inset-0 z-[600] flex flex-col items-center justify-center gap-3 ${status === "loading" ? "ba-skeleton" : "bg-muted"}`}>
             {status === "error" && (
               <>
-                <p className="font-semibold text-foreground">Couldn't load the roof preview</p>
-                <Button variant="outline" size="sm" onPointerDown={(e) => e.stopPropagation()} onClick={() => setRetry((n) => n + 1)}>Retry</Button>
+                <p className="font-semibold text-foreground">{tx("Couldn't load the roof preview")}</p>
+                <Button variant="outline" size="sm" onPointerDown={(e) => e.stopPropagation()} onClick={() => setRetry((n) => n + 1)}>{tx("Retry")}</Button>
               </>
             )}
           </div>
@@ -319,11 +323,11 @@ export function BeforeAfter({ option, outline, layout: fullLayout, usable, cover
 
         {layout && layout.count > 0 && status === "ready" && (
           <span className="pointer-events-none absolute bottom-3 right-3 z-[700] rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
-            {formatNum(layout.count)} {layout.count === 1 ? "panel" : "panels"} · {layout.kw.toFixed(1)} kW
+            {tx(layout.count === 1 ? "{n} panel" : "{n} panels", { n: formatNum(layout.count) })} · {layout.kw.toFixed(1)} kW
           </span>
         )}
-        <span className="pointer-events-none absolute left-3 top-3 z-[700] rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm sm:text-sm">Before</span>
-        <span className="pointer-events-none absolute right-3 top-3 z-[700] max-w-[60%] truncate rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm sm:text-sm">After: {label}</span>
+        <span className="pointer-events-none absolute left-3 top-3 z-[700] rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm sm:text-sm">{tx("Before")}</span>
+        <span className="pointer-events-none absolute right-3 top-3 z-[700] max-w-[60%] truncate rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm sm:text-sm">{tx("After: {label}", { label })}</span>
         <div className="pointer-events-none absolute inset-y-0 z-[700] w-0.5 -translate-x-1/2 bg-card shadow" style={{ left: `${pos}%` }}>
           <div className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary bg-card text-base font-bold text-primary shadow-lg">
             ‹ ›
@@ -332,7 +336,7 @@ export function BeforeAfter({ option, outline, layout: fullLayout, usable, cover
       </div>
       <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div className="text-sm text-foreground/80">{caption}</div>
-        <p className="text-xs text-foreground/60">Imagery © Esri</p>
+        <p className="text-xs text-foreground/60">{tx("Imagery © Esri")}</p>
       </div>
     </div>
   );

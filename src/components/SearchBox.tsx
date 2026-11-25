@@ -5,10 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { toast } from "sonner";
 import { fetchSuggestions, searchAddress, type Place, type Suggestion } from "@/lib/geocode";
+import { useI18n } from "@/lib/i18n";
 
 const PIN_MS = 4000;
 
 export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () => void }) {
+  const { tx } = useI18n();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -39,7 +41,7 @@ export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () 
       } catch (e) {
         if (ctrl.signal.aborted || (e as Error).name === "AbortError") return;
         setResults([]); setPhotonDown(true); setOpen(false);
-        toast.error("Suggestions are unavailable. Press Enter to search instead.");
+        toast.error(tx("Suggestions are unavailable. Press Enter to search instead."));
       } finally {
         if (!ctrl.signal.aborted) setLoading(false);
       }
@@ -87,8 +89,8 @@ export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () 
     setLoading(true); setMsg(null);
     try {
       const p = await searchAddress(term);
-      if (p) { onSearch?.(); flyTo(p); } else setMsg("No places found.");
-    } catch { toast.error("Search is unavailable right now."); }
+      if (p) { onSearch?.(); flyTo(p); } else setMsg(tx("No places found."));
+    } catch { toast.error(tx("Search is unavailable right now.")); }
     finally { setLoading(false); }
   }
 
@@ -109,15 +111,15 @@ export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () 
 
   function locate() {
     setMsg(null);
-    if (!("geolocation" in navigator)) { setMsg("Your browser can't share your location."); return; }
+    if (!("geolocation" in navigator)) { setMsg(tx("Your browser can't share your location.")); return; }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => { setLocating(false); flyTo({ lat: pos.coords.latitude, lon: pos.coords.longitude }); },
       (err) => {
         setLocating(false);
-        setMsg(err.code === err.PERMISSION_DENIED
+        setMsg(tx(err.code === err.PERMISSION_DENIED
           ? "Location access is turned off. Allow it in your browser settings, or search an address instead."
-          : "We couldn't find your location. Try searching an address instead.");
+          : "We couldn't find your location. Try searching an address instead."));
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
@@ -135,7 +137,7 @@ export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () 
             onChange={(e) => { setQ(e.target.value); setMsg(null); }}
             onFocus={() => results.length && setOpen(true)}
             onKeyDown={onKeyDown}
-            placeholder="Search an address"
+            placeholder={tx("Search an address")}
             role="combobox"
             aria-expanded={showList}
             aria-controls="place-suggestions"
@@ -143,10 +145,10 @@ export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () 
             aria-activedescendant={active >= 0 ? `place-opt-${active}` : undefined}
             className="h-11 w-full rounded-lg border border-input bg-card py-2 pl-3 pr-9 text-base shadow-sm outline-none focus:ring-2 focus:ring-ring md:h-10 md:text-sm"
           />
-          {loading && <Loader2 aria-label="Searching" className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
+          {loading && <Loader2 aria-label={tx("Searching")} className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
         </div>
         <Button type="button" variant="outline" onClick={locate} disabled={locating || !map}
-          aria-label="Use my current location" title="Use my current location" className="h-11 w-11 bg-card p-0 md:h-10 md:w-10">
+          aria-label={tx("Use my current location")} title={tx("Use my current location")} className="h-11 w-11 bg-card p-0 md:h-10 md:w-10">
           {locating ? <Loader2 className="animate-spin" /> : <Crosshair />}
         </Button>
       </div>
@@ -168,10 +170,10 @@ export function SearchBox({ map, onSearch }: { map: L.Map | null; onSearch?: () 
             </li>
           ))}
           {!loading && results.length === 0 && (
-            <li className="px-3 py-3 text-sm text-muted-foreground">No places found</li>
+            <li className="px-3 py-3 text-sm text-muted-foreground">{tx("No places found")}</li>
           )}
           {loading && results.length === 0 && (
-            <li className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Searching…</li>
+            <li className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{tx("Searching…")}</li>
           )}
         </ul>
       )}

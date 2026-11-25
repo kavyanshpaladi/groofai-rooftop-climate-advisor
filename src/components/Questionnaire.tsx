@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BUDGET_LABELS, type Answers, type Budget } from "@/lib/scoring";
+import { useI18n } from "@/lib/i18n";
 
 type Q<K extends keyof Answers> = { key: K; label: string; options: { value: Answers[K]; label: string }[] };
 
@@ -15,12 +16,13 @@ const QUESTIONS = [
 export type Draft = Partial<Answers>;
 
 export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v: Draft) => void }) {
+  const { tx } = useI18n();
   return (
     <div className="space-y-3">
-      <p aria-live="polite" className="text-xs font-medium text-muted-foreground">{QUESTIONS.filter((q) => value[q.key]).length} of {QUESTIONS.length} answered</p>
+      <p aria-live="polite" className="text-xs font-medium text-muted-foreground">{QUESTIONS.filter((q) => value[q.key]).length} {tx("of")} {QUESTIONS.length} {tx("answered")}</p>
       {QUESTIONS.map((q) => (
         <div key={q.key}>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">{q.label}</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">{tx(q.label)}</p>
           <div className="flex flex-wrap gap-1.5">
             {q.options.map((o) => {
               const active = value[q.key] === o.value;
@@ -28,7 +30,7 @@ export function Questionnaire({ value, onChange }: { value: Draft; onChange: (v:
                 <Button key={String(o.value)} type="button" variant="chip" size="sm" aria-pressed={active} onClick={() => onChange({ ...value, [q.key]: o.value })}
                   className="gap-1.5 px-2.5">
                   <Check aria-hidden="true" className={active ? "opacity-100" : "opacity-0"} />
-                  {o.label}
+                  {tx(o.label)}
                 </Button>
               );
             })}

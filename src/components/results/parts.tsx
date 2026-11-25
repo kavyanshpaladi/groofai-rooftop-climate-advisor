@@ -54,7 +54,7 @@ export function ScoreRing({ score, size = 112 }: { score: number; size?: number 
   const [shown, setShown] = useState(prefersReducedMotion() ? score : 0);
   useEffect(() => { const id = requestAnimationFrame(() => setShown(score)); return () => cancelAnimationFrame(id); }, [score]);
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={`Score ${score} out of 100`}>
+    <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={useI18n().tx("Score {n} out of 100", { n: score })}>
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--muted)" strokeWidth="9" />
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--primary)" strokeWidth="9" strokeLinecap="round"
@@ -111,7 +111,7 @@ const STEP_BUTTON =
 export function StepperTile({ label, value, step, className }: { label: string; value: ReactNode; step: TileStep; className?: string }) {
   return (
     <div
-      role="group" aria-label={`${label}, adjustable`} tabIndex={0}
+      role="group" aria-label={useI18n().tx("{label}, adjustable", { label })} tabIndex={0}
       onKeyDown={(e) => {
         if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
         e.preventDefault();
@@ -204,7 +204,7 @@ useEffect(() => {
     document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   };
   return (
-    <nav aria-label="Report sections" className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur print:hidden sm:-mx-6 sm:px-6">
+    <nav aria-label={useI18n().tx("Report sections")} className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur print:hidden sm:-mx-6 sm:px-6">
       <div ref={listRef} className="no-scrollbar flex gap-1 overflow-x-auto py-2">
         {items.map((i) => (
           <button key={i.id} type="button" data-id={i.id} onClick={() => go(i.id)} aria-current={active === i.id ? "true" : undefined}
