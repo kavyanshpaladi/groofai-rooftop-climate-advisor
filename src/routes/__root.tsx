@@ -12,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { LanguageProvider } from "@/lib/i18n";
+import { ChatReportProvider } from "@/lib/chat-report";
+import { AdvisorProgressProvider } from "@/lib/advisor-progress";
+import { AssistantChat } from "@/components/AssistantChat";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -118,7 +121,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <LanguageProvider>
-        <Outlet />
+        <ChatReportProvider>
+          <AdvisorProgressProvider><Outlet /></AdvisorProgressProvider>
+          <AssistantChat />
+        </ChatReportProvider>
       </LanguageProvider>
     </QueryClientProvider>
   );

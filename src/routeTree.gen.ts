@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdvisorRouteImport } from './routes/advisor'
+import { Route as BillAnalyzerRouteImport } from './routes/bill-analyzer'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
@@ -23,6 +25,16 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdvisorRoute = AdvisorRouteImport.update({
+  id: '/advisor',
+  path: '/advisor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillAnalyzerRoute = BillAnalyzerRouteImport.update({
+  id: '/bill-analyzer',
+  path: '/bill-analyzer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -44,6 +56,8 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/advisor': typeof AdvisorRoute
+  '/bill-analyzer': typeof BillAnalyzerRoute
   '/map': typeof MapRoute
   '/results': typeof ResultsRoute
   '/admin/login': typeof AdminLoginRoute
@@ -51,6 +65,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/advisor': typeof AdvisorRoute
+  '/bill-analyzer': typeof BillAnalyzerRoute
   '/map': typeof MapRoute
   '/results': typeof ResultsRoute
   '/admin/login': typeof AdminLoginRoute
@@ -59,21 +75,47 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/advisor': typeof AdvisorRoute
+  '/bill-analyzer': typeof BillAnalyzerRoute
   '/map': typeof MapRoute
   '/results': typeof ResultsRoute
   '/admin_/login': typeof AdminLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/map' | '/results' | '/admin/login'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/advisor'
+    | '/bill-analyzer'
+    | '/map'
+    | '/results'
+    | '/admin/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/map' | '/results' | '/admin/login'
-  id: '__root__' | '/' | '/admin' | '/map' | '/results' | '/admin_/login'
+  to:
+    | '/'
+    | '/admin'
+    | '/advisor'
+    | '/bill-analyzer'
+    | '/map'
+    | '/results'
+    | '/admin/login'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/advisor'
+    | '/bill-analyzer'
+    | '/map'
+    | '/results'
+    | '/admin_/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AdvisorRoute: typeof AdvisorRoute
+  BillAnalyzerRoute: typeof BillAnalyzerRoute
   MapRoute: typeof MapRoute
   ResultsRoute: typeof ResultsRoute
   AdminLoginRoute: typeof AdminLoginRoute
@@ -93,6 +135,20 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/advisor': {
+      id: '/advisor'
+      path: '/advisor'
+      fullPath: '/advisor'
+      preLoaderRoute: typeof AdvisorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bill-analyzer': {
+      id: '/bill-analyzer'
+      path: '/bill-analyzer'
+      fullPath: '/bill-analyzer'
+      preLoaderRoute: typeof BillAnalyzerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -122,6 +178,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AdvisorRoute: AdvisorRoute,
+  BillAnalyzerRoute: BillAnalyzerRoute,
   MapRoute: MapRoute,
   ResultsRoute: ResultsRoute,
   AdminLoginRoute: AdminLoginRoute,

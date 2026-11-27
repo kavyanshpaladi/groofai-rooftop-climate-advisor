@@ -41,3 +41,9 @@ use the editor.
 - Page text is translated through useI18n: keyed strings in lib/translations, English-keyed strings (tx) in lib/translations-app and lib/translations-results; lib code such as scoring keeps returning English and pages translate at render, so calculations never depend on the language.
 - The AI Solar Advisor (/advisor, lib/advisor*) calls Gemini from the server with the shared GEMINI_API_KEY and a response schema, never sends coordinates or stores the photo, and rate-limits per IP in memory (best effort per server instance) to protect the free-tier quota.
 - The advisor shares only a short result summary with the chatbot through useAdvisorChat (lib/chat-report); the chat sends it only on /advisor, like the report on /results.
+
+- Keep content screens in their TanStack route files; lazy-import browser-only maps so SSR never evaluates Leaflet.
+- Preserve migrated third-party AI providers and output contracts; credentials stay in the encrypted secret store, never in source.
+- Keep bill extraction schemas and normalization in lib/bill, the scanner UI in its own component, and Gemini extraction in the advisor server helper; sharing the model and IP limiter preserves provider behavior without retaining bill photos.
+- Keep Advisor drafts in a root-scoped progress provider with best-effort session storage; per-visit memory preserves large roof photos across the Bill Analyzer round trip.
+- Derive Bill Analyzer estimates through lib/bill-analytics using the existing impact model; persist only canonical month, units and amount for local bill history, never images or arbitrary text.
