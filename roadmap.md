@@ -39,3 +39,9 @@
 # Before you install section
 - [x] Subsidy explainer box: three plain-language steps worked out with the chosen size, visible "Check it yourself" sources, last-checked line
 - [x] Make the "Before you install" checklist more striking (numbered cards)
+
+# Floating AI assistant
+- [x] Add the Gemini assistant to every page, with report-only number sharing and session limits
+
+## AI Solar Advisor
+- [x] Photo + energy needs form, Gemini recommendation, results, chatbot hand-off
